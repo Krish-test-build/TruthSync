@@ -16,4 +16,13 @@ router.post('/new-claim', authMiddleware.authUser,uploadMiddleware.single('image
 ], claimController.createClaim);
 
 
+router.get('/my-claims',authMiddleware.authUser, claimController.getMyClaims);
+router.get('/claim/:id',authMiddleware.authUser, claimController.getThisClaim);
+router.put('/update-claim/:id',authMiddleware.authUser, uploadMiddleware.single('image'),[
+    body('title').isLength({ min: 1, max: 20 }).withMessage('Title must be between 1-20 characters'),
+    body('description').isLength({ min: 1, max: 200 }).withMessage('Description must be between 1-200 characters'),
+    body('category').isIn(['Politics','Health','Education','Entertainment','Science and Tech','Finance','Belief','Miscellaneous']).withMessage('Category must be one of the following: Politics, Health, Education, Entertainment, Science and Tech, Finance, Belief, Miscellaneous')]
+, claimController.updateClaim);
+router.delete('/delete-claim/:id',authMiddleware.authUser, claimController.deleteClaim);
+
 module.exports = router;

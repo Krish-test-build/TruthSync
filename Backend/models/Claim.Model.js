@@ -32,11 +32,11 @@ const ClaimSchema = new mongoose.Schema({
   },
     isAnonymous:{
         type: Boolean,
-        default: defaultImage
+        default: false
     },
     image: {
     type: String,
-    default: null
+    default: defaultImage
     }
 
 

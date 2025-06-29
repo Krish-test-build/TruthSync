@@ -16,3 +16,21 @@ module.exports.newClaim = async (data) => {
 
   return newClaim;
 };
+
+module.exports.getClaim = async (id) => {
+  const claim = await claimModel.find({ user: id });
+  return claim;
+};
+
+module.exports.getClaimById = async (id) => {
+  const claim = await claimModel.findById(id);
+  return claim;
+};
+module.exports.updateClaim = async (id, data) => {
+  const claim = await claimModel.findByIdAndUpdate(id, data, { new: true });
+  return claim;
+};
+module.exports.deleteClaim = async (id) => {
+  const claim = await claimModel.findByIdAndDelete(id);
+  return claim;
+};
