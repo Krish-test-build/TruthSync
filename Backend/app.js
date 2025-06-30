@@ -6,6 +6,7 @@ const userRoutes=require('./routes/User.routes');
 const claimRoutes=require('./routes/Claim.routes');
 const adminRoutes=require('./routes/Admin.routes');
 const publicRoutes=require('./routes/Public.routes');
+const voteRoutes=require('./routes/Vote.routes');
 const cookieParser=require('cookie-parser');
 const cors=require('cors');
 const connectDB=require('./db/MyDb')
@@ -28,6 +29,7 @@ app.use(userRoutes);
 app.use(publicRoutes);
 app.use('/claim',claimRoutes);
 app.use('/admin',adminRoutes);
+app.use('/votes',voteRoutes)
 
 
 module.exports=app

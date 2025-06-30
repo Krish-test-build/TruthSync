@@ -4,6 +4,7 @@ const express = require('express');
 const router = express.Router();
 const uploadMiddleware = require('../middleware/upload.middleware');
 
+
 const {body}=require("express-validator")
 
 
@@ -16,6 +17,8 @@ router.post('/new-claim', authMiddleware.authUser,uploadMiddleware.single('image
 ], claimController.createClaim);
 
 
+router.get('/claim/sort',authMiddleware.authUser, claimController.sortClaims);
+router.get('/claim/filterBy/:category',authMiddleware.authUser, claimController.filterClaims);
 router.get('/my-claims',authMiddleware.authUser, claimController.getMyClaims);
 router.get('/claim/:id',authMiddleware.authUser, claimController.getThisClaim);
 router.put('/update-claim/:id',authMiddleware.authUser, uploadMiddleware.single('image'),[
@@ -24,5 +27,10 @@ router.put('/update-claim/:id',authMiddleware.authUser, uploadMiddleware.single(
     body('category').isIn(['Politics','Health','Education','Entertainment','Science and Tech','Finance','Belief','Miscellaneous']).withMessage('Category must be one of the following: Politics, Health, Education, Entertainment, Science and Tech, Finance, Belief, Miscellaneous')]
 , claimController.updateClaim);
 router.delete('/delete-claim/:id',authMiddleware.authUser, claimController.deleteClaim);
+
+router.post('/claim/:id/comment',authMiddleware.authUser,[
+    body('comments').isLength({ min: 1, max: 200 }).withMessage('Comment must be between 1-200 characters'),
+], claimController.commentClaim);
+router.get('/claim/:id/comments',authMiddleware.authUser, claimController.getComments);
 
 module.exports = router;

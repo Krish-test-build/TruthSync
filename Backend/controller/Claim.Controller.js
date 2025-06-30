@@ -2,6 +2,9 @@ const claimService = require('../services/Claim.Services');
 const { validationResult } = require('express-validator');
 const {defaultImage} = require('../config/Default.config');
 const moderationServices = require('../services/Moderation.Services');
+const ClaimModel = require('../models/Claim.Model');
+const CommentModel = require('../models/Comment.Model');
+
 
 module.exports.createClaim = async (req, res) => {
   const errors = validationResult(req);
@@ -94,3 +97,65 @@ module.exports.deleteClaim = async(req,res) =>{
     }
 }
 
+module.exports.sortClaims = async (req,res) => {
+    try{
+        const {query} = req.query
+        let claim;
+        if(!query){
+            claim = await ClaimModel.find({}).populate('user');
+            res.status(200).json({claim:claim})
+        }
+        if(query==='Most Recent'){
+            claim = await ClaimModel.find({}).sort({createdAt: -1}).populate('user');
+        }else if(query==='Most Popular'){
+            claim = await ClaimModel.find({}).sort({votes: -1}).populate('user');
+        }else if(query==='Categories'){
+            claim =await ClaimModel.find({}).sort({category: 1}).populate('user');
+        }else{
+            res.status(400).json({message: 'Invalid query'})
+        }
+        res.status(200).json({message: 'Sorted successfully', claim: claim})
+    }catch(error){
+        res.status(500).json({error: error.message})
+    }
+}
+module.exports.filterClaims = async (req,res) => {
+    const {category} = req.params
+    try{
+        const claim = await ClaimModel.find({category: category}).populate('user');
+        res.status(200).json({claim:claim})
+    }catch(error){
+        res.status(500).json({error: error.message})
+    }
+    
+}
+
+module.exports.commentClaim = async (req,res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+    try {
+      const claim = await CommentModel.findById(req.params.id);
+        if (!claim) {
+          return res.status(404).json({ message: 'Claim not found' });
+        }
+        const comment = new CommentModel({ user: req.user._id, claim: req.params.id, comments: req.body.comments });
+        await comment.save();
+        res.status(200).json({ message: 'Comment added successfully' });
+      
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+    
+}
+module.exports.getComments = async (req,res) => {
+    try{
+      const comments = await CommentModel.find({ claim: req.params.id }).populate('user', 'username'); 
+      res.status(200).json({ comments });
+
+    }catch(error){
+      res.status(500).json({error: error.message})
+    }
+    
+}

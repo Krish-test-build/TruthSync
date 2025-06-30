@@ -52,3 +52,22 @@ module.exports.getPendingClaims= async (req,res) => {
     }
     
 }
+module.exports.getStats =async (req,res) => {
+  try {
+    const stats = await ClaimModel.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalClaims: { $sum: 1 },
+          totalApproved: { $sum: { $cond: [{ $eq: ['$status', 'Approved'] }, 1, 0] } },
+          totalRejected: { $sum: { $cond: [{ $eq: ['$status', 'Rejected'] }, 1, 0] } },
+          totalPending: { $sum: { $cond: [{ $eq: ['$status', 'Pending'] }, 1, 0] } },
+        },
+      },
+    ]);
+    res.status(200).json(stats[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+  
+}
