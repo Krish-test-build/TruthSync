@@ -30,7 +30,6 @@ router.post('/login',[
 ], LoginController.loginUser);
 
 
-router.get('/home', authMiddleware.authUser, ProfileController.getUserHome);
 router.get('/logout', authMiddleware.authUser,LogoutController.logoutUser); 
 router.get('/profile', authMiddleware.authUser, ProfileController.getProfile);
 router.put('/profile', authMiddleware.authUser,uploadMiddleware.single('image'), ProfileController.updateProfile);

@@ -1,5 +1,6 @@
 const claimModel = require('../models/Claim.Model');
 const {defaultImage} = require('../config/Default.config')
+const moderationServices = require('./Moderation.Services');
 
 
 module.exports.newClaim = async (data) => {
@@ -10,7 +11,7 @@ module.exports.newClaim = async (data) => {
     image: data.image || defaultImage,           
     user: data.user,
     isAnonymous: data.isAnonymous || false,
-    status: 'Pending',
+    status: data.status || 'Approved',
     date: new Date()
   });
 

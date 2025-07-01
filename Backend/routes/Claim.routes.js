@@ -17,10 +17,10 @@ router.post('/new-claim', authMiddleware.authUser,uploadMiddleware.single('image
 ], claimController.createClaim);
 
 
-router.get('/claim/sort',authMiddleware.authUser, claimController.sortClaims);
-router.get('/claim/filterBy/:category',authMiddleware.authUser, claimController.filterClaims);
-router.get('/my-claims',authMiddleware.authUser, claimController.getMyClaims);
-router.get('/claim/:id',authMiddleware.authUser, claimController.getThisClaim);
+router.get('/sort',authMiddleware.authUser, claimController.sortClaims);
+router.get('/filterBy/:category',authMiddleware.authUser, claimController.filterClaims);
+router.get('/my-claims',authMiddleware.authUser, claimController.getMyClaims); 
+router.get('/:id',authMiddleware.authUser, claimController.getThisClaim); 
 router.put('/update-claim/:id',authMiddleware.authUser, uploadMiddleware.single('image'),[
     body('title').isLength({ min: 1, max: 20 }).withMessage('Title must be between 1-20 characters'),
     body('description').isLength({ min: 1, max: 200 }).withMessage('Description must be between 1-200 characters'),
@@ -28,9 +28,10 @@ router.put('/update-claim/:id',authMiddleware.authUser, uploadMiddleware.single(
 , claimController.updateClaim);
 router.delete('/delete-claim/:id',authMiddleware.authUser, claimController.deleteClaim);
 
-router.post('/claim/:id/comment',authMiddleware.authUser,[
+router.post('/:id/comment',authMiddleware.authUser,[
     body('comments').isLength({ min: 1, max: 200 }).withMessage('Comment must be between 1-200 characters'),
 ], claimController.commentClaim);
-router.get('/claim/:id/comments',authMiddleware.authUser, claimController.getComments);
+router.get('/:id/comments',authMiddleware.authUser, claimController.getComments);
+router.delete('/delete-comment/:id',authMiddleware.authUser, claimController.deleteComment);
 
 module.exports = router;

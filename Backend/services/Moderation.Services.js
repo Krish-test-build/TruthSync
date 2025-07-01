@@ -19,7 +19,7 @@ module.exports.checkToxicity = async (text) => {
 
     const scores = response.data.attributeScores;
     return {
-      isFlagged: Object.values(scores).some(attr => attr.summaryScore.value >= 0.8),
+      isFlagged: Object.values(scores).some(attr => attr.summaryScore.value >= 0.825),
       rawScores: scores
     };
   } catch (error) {

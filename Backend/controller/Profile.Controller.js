@@ -1,14 +1,12 @@
 const UserModel = require("../models/SignUp.Model");
 const {defaultImage} = require('../config/Default.config');
 
-module.exports.getUserHome= async(req,res,next)=>{
-    return res.status(200).json(req.user)
-}
+
 
 module.exports.getProfile = async (req, res) => {
   try {
     const { _id, firstName, lastName, username, email, createdAt } = req.user;
-    res.status(200).json({ _id, firstName, lastName, username, email, createdAt });
+    res.status(200).json({ _id, firstName, lastName,image: image || defaultImage, username, email, createdAt });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

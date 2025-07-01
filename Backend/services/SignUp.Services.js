@@ -4,7 +4,7 @@ const {defaultImage} = require('../config/Default.config')
 
 
 
-module.exports.signup= async({firstName,lastName,username,email,password})=>{
+module.exports.signup= async({firstName,lastName,username,email,password,image})=>{
     if(!firstName || !lastName || !username || !email || !password){
         throw new Error(`Please fill in ${!firstName ? 'firstName' : !lastName ? 'lastName' : !username ? 'username' : !email ? 'email' : 'password'} field`);
     }

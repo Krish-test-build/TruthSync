@@ -1,6 +1,7 @@
 const { validationResult } = require('express-validator');
 const ClaimModel = require('../models/Claim.Model');
-
+const CommentModel = require('../models/Comment.Model');
+const NotificationModel = require('../models/Notification.Model');
 
 module.exports.moderateClaim = async (req, res) => {
   const errors = validationResult(req);
@@ -28,6 +29,10 @@ module.exports.moderateClaim = async (req, res) => {
 
     claim.status = decision;
     await claim.save();
+    await NotificationModel.create({
+    user: claim.user._id,
+    message: `Your flagged claim titled "${claim.title}" was ${decision}.`,
+  });
 
     if (decision === 'Rejected') {
       return res.status(200).json({

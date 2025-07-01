@@ -36,7 +36,7 @@ const ClaimSchema = new mongoose.Schema({
     },
     image: {
     type: String,
-    default: defaultImage
+    default: null
     }
 
 

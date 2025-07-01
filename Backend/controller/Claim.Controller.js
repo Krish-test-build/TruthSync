@@ -4,6 +4,7 @@ const {defaultImage} = require('../config/Default.config');
 const moderationServices = require('../services/Moderation.Services');
 const ClaimModel = require('../models/Claim.Model');
 const CommentModel = require('../models/Comment.Model');
+const NotificationModel = require('../models/Notification.Model');
 
 
 module.exports.createClaim = async (req, res) => {
@@ -136,12 +137,19 @@ module.exports.commentClaim = async (req,res) => {
         return res.status(400).json({ errors: errors.array() });
     }
     try {
-      const claim = await CommentModel.findById(req.params.id);
+      console.log(req.params.id)
+      const claim = await ClaimModel.findById(req.params.id);
         if (!claim) {
           return res.status(404).json({ message: 'Claim not found' });
         }
         const comment = new CommentModel({ user: req.user._id, claim: req.params.id, comments: req.body.comments });
         await comment.save();
+        if (claim.user.toString() !== req.user._id.toString()) {
+          await NotificationModel.create({
+            user: claim.user,
+            message: `New comment on your claim ${claim.title}`,
+          });
+        }
         res.status(200).json({ message: 'Comment added successfully' });
       
     } catch (error) {
@@ -154,6 +162,20 @@ module.exports.getComments = async (req,res) => {
       const comments = await CommentModel.find({ claim: req.params.id }).populate('user', 'username'); 
       res.status(200).json({ comments });
 
+    }catch(error){
+      res.status(500).json({error: error.message})
+    }
+    
+}
+module.exports.deleteComment = async (req,res) => {
+    try{
+      const comment = await CommentModel.findById(req.params.id);
+      if (!comment || comment.user.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ message: 'Unauthorized' });
+      }
+      await comment.deleteOne();
+
+      res.status(200).json({message: 'Comment deleted successfully'})
     }catch(error){
       res.status(500).json({error: error.message})
     }
