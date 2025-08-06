@@ -18,7 +18,7 @@ const ClaimSchema = new mongoose.Schema({
     },
     category:{
         type: String,
-        enum:['Politics','Health','Education','Entertainment','Science and Tech','Finance','Belief','Miscellaneous'],
+        enum:['Politics','Health','Education','Entertainment','Science and Tech','Finance','Sports','Miscellaneous'],
         required: true
     },
     date: {
