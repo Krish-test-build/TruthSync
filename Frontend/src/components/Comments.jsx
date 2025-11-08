@@ -1,42 +1,93 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import api from '../api/axiosConfig'
+import Lenis from 'lenis'
 
-const Comments = ({ initialComments = [] }) => {
-  const [comments, setComments] = useState(initialComments)
+const Comments = ({ claimId, onNoComments }) => {
+  const [comments, setComments] = useState([])
   const [newComment, setNewComment] = useState('')
+  const [loading, setLoading] = useState(false)
+  const scrollRef = useRef()
 
-  const handleAddComment = () => {
-    if (!newComment.trim()) return
-
-    const newEntry = {
-      id: comments.length + 1,
-      user: 'anonymousUser',
-      text: newComment,
-      date: new Date().toISOString().split('T')[0]
+  useEffect(() => {
+    const fetchComments = async () => {
+      try {
+        const res = await api.get(`/claim/${claimId}/comments`)
+        setComments(res.data.comments || [])
+        if ((res.data.comments || []).length === 0 && onNoComments) {
+          onNoComments()
+        }
+      } catch (err) {
+        console.error('Error fetching comments:', err)
+      }
     }
+    if (claimId) fetchComments()
+  }, [claimId, onNoComments])
 
-    setComments([...comments, newEntry])
-    setNewComment('')
+  useEffect(() => {
+    if (!scrollRef.current) return
+
+    const lenis = new Lenis({
+      wrapper: scrollRef.current,
+      content: scrollRef.current,
+      smooth: true,
+      duration: 2,
+    })
+
+    function raf(time) {
+      lenis.raf(time)
+      requestAnimationFrame(raf)
+    }
+    requestAnimationFrame(raf)
+
+    return () => {
+      lenis.destroy()
+    }
+  }, [])
+
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return
+    setLoading(true)
+    try {
+      const res = await api.post(`/claim/${claimId}/comment`, { comments: newComment })
+      console.log('POST response:', res.data) // Debug: Check if comment is returned
+      setComments((prev) => {
+        const updated = [...prev, res.data.comment]
+        console.log('Updated comments:', updated) // Debug: Check state update
+        return updated
+      })
+      setNewComment('')
+    } catch (err) {
+      console.error('Error posting comment:', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className="w-full h-full flex flex-col p-4 rounded-3xl border-4 border-white bg-black bg-opacity-40 shadow-xl font-[spaceMono] text-white">
-      <h2 className="text-3xl font-bold font-[monaco] mb-4" style={{ textShadow: '2px 2px 2px #51E5F8' }}>
+      <h2 className="text-3xl font-bold font-[monaco] " style={{ textShadow: '2px 2px 2px #51E5F8' }}>
         Comments
       </h2>
 
-      <div className="flex flex-col gap-4 text-black max-h-[70vh] overflow-y-auto scrollbar-hide">
-        {comments.map(comment => (
-          <div
-            key={comment.id}
-            className="bg-white bg-opacity-20 rounded-2xl p-4 border-2 border-cyan-300 shadow-md"
-          >
-            <div className="flex justify-between mb-1">
-              <span className="text-purple-600 font-semibold">{comment.user}</span>
-              <span className="text-sm text-gray-700 opacity-70">{comment.date}</span>
+      <div ref={scrollRef} className="flex flex-col gap-3 text-black max-h-[70vh] pr-3 overflow-y-auto scrollbar-visible">
+        {comments.length > 0 ? (
+          comments.map((comment) => (
+            <div
+              key={comment._id}
+              className="bg-white bg-opacity-20 rounded-2xl px-4 py-2 border-2 border-cyan-300 shadow-md"
+            >
+              <div className="flex justify-between mb-1">
+                <span className="text-purple-600 font-semibold">
+                  {comment.user?.username || 'Anonymous'}
+                </span>
+                <span className="text-sm text-gray-700 opacity-70">
+                  {new Date(comment.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="text-base text-black">{comment.comments}</div>
             </div>
-            <div className="text-base text-black">{comment.text}</div>
-          </div>
-        ))}
+          ))
+        ) : null}
       </div>
 
       <div className="mt-4">
@@ -49,9 +100,10 @@ const Comments = ({ initialComments = [] }) => {
         />
         <button
           onClick={handleAddComment}
-          className="mt-2 bg-purple-600 text-white px-4 py-2 rounded-xl hover:bg-purple-700 transition hover:scale-105 font-bold"
+          disabled={loading}
+          className="mt-2 bg-purple-600 text-white px-4 py-2 rounded-xl hover:bg-purple-700 transition hover:scale-105 font-bold disabled:opacity-50"
         >
-          Post Comment
+          {loading ? 'Posting...' : 'Post Comment'}
         </button>
       </div>
     </div>

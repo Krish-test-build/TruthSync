@@ -1,7 +1,11 @@
 import React, { useState, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import axios from 'axios'
 
 const SignUp = () => {
+  const [user, setUser] = useState(null)
+
+  const navigate = useNavigate()
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -38,9 +42,33 @@ const SignUp = () => {
   const handleDragOver = (e) => {
     e.preventDefault()
   }
+ 
 
-  const submitHandler = (e) => {
+  const submitHandler = async (e) => {
     e.preventDefault()
+     if (!form.firstName || !form.lastName || !form.username || !form.email || !form.password) {
+      alert('Please fill in all fields')
+      return
+    }   
+    const newUser = new FormData();
+    newUser.append('firstName', form.firstName)
+    newUser.append('lastName', form.lastName)
+    newUser.append('username', form.username)
+    newUser.append('email', form.email)
+    newUser.append('password', form.password)
+    if (form.image) {
+      newUser.append('image', form.image)
+
+    }
+    
+    
+      const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/signup`,newUser)
+      if(response.status==201){
+          const data=response.data
+          setUser(data.user)
+          localStorage.setItem('token',data.token)
+          alert('User created successfully')
+      }
     setForm({
       firstName: '',
       lastName: '',
@@ -154,6 +182,7 @@ const SignUp = () => {
           />
           
           <button
+            onClick={submitHandler}
             className='relative top-45 bg-transparent drop-shadow-sm drop-shadow-cyan-300 border-4 border-white h-14 w-60 rounded-full text-white text-2xl font-bold hover:scale-110 hover:cursor-pointer transition duration-300 ease-in-out animate- font-[spaceMono]'
             type="submit"
           >

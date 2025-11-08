@@ -1,27 +1,40 @@
 import React, { useState } from 'react'
 import SideBar from '../components/SideBar'
 import { useNavigate } from 'react-router-dom'
+import axios from 'axios'
 
 const NewClaim = () => {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [mediaFile, setMediaFile] = useState(null)
+  const [selectedFile, setSelectedFile] = useState(null)
   const [isAnonymous, setIsAnonymous] = useState(false)
   const [category, setCategory] = useState('')
 
   const navigate = useNavigate()
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
 
-    console.log({ title, description, mediaFile, isAnonymous, category })
+    const formData = new FormData()
+    formData.append('title', title)
+    formData.append('description', description)
+    formData.append('category', category)
+    formData.append('isAnonymous', isAnonymous)
+    if (selectedFile) {
+      formData.append('image', selectedFile) 
+    }
 
     setTitle('')
     setDescription('')
-    setMediaFile(null)
+    setSelectedFile(null)
     setIsAnonymous(false)
     setCategory('')
 
+    await axios.post(`${import.meta.env.VITE_BASE_URL}/claim/new-claim`, formData, {
+      withCredentials: true,
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    alert('Claim submitted successfully!')
     navigate('/home')
   }
 
@@ -103,7 +116,7 @@ const NewClaim = () => {
                 </span>
                 <input
                   type="file"
-                  onChange={(e) => setMediaFile(e.target.files[0])}
+                  onChange={(e) => setSelectedFile(e.target.files[0])}
                   className="border-2 border-gray-300 text-white hover:cursor-pointer rounded-xl p-2 hover:scale-105 duration-200 ease-in-out file:bg-purple-600 file:cursor-pointer file:text-white file:rounded file:px-4 file:py-1"
                   accept="image/*,video/*"
                 />

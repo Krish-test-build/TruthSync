@@ -1,7 +1,11 @@
-import React, { useState } from 'react'
+import React, { use, useState,useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FaUserCircle, FaEnvelope, FaLock, FaImage, FaSignOutAlt, FaUserEdit } from 'react-icons/fa'
+import { useNavigate } from 'react-router-dom'
+import axios from 'axios'
 
+
+    
 const Modal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null
 
@@ -29,7 +33,9 @@ const Modal = ({ isOpen, onClose, title, children }) => {
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-const Profile = () => {
+const Profile = ({fetchProfile}) => {
+  const navigate = useNavigate()
+  const [user, setUser] = useState(null)
   const [emailModalOpen, setEmailModalOpen] = useState(false)
   const [passwordModalOpen, setPasswordModalOpen] = useState(false)
   const [picModalOpen, setPicModalOpen] = useState(false)
@@ -41,24 +47,54 @@ const Profile = () => {
   const [fullName, setFullName] = useState('')
   const [username, setUsername] = useState('')
 
-  const submitHandler =  (e) => {
+  const submitHandler = async (e) => {
     e.preventDefault()
+    if (email) {
+      await axios.put(`${import.meta.env.VITE_BASE_URL}/profile`, { email }, { withCredentials: true });
+    }
+    if (password) {
+      await axios.put(`${import.meta.env.VITE_BASE_URL}/profile`, { password }, { withCredentials: true });
+    }
+    if (profilePic) {
+      const formData = new FormData();
+      formData.append('image', profilePic);
+      await axios.put(`${import.meta.env.VITE_BASE_URL}/profile`, formData, { withCredentials: true });
+    }
+    if (fullName || username) {
+      await axios.put(`${import.meta.env.VITE_BASE_URL}/profile`, { fullName, username }, { withCredentials: true });
+    }
     setEmail('')
     setPassword('')
     setProfilePic(null)
     setFullName('')
     setUsername('')
   }
-   
+  useEffect(() => {
+    const loadProfile = async () => {
+      const res = await fetchProfile()
+      if (res) {
+      setUser(res); 
+    }
+    }
+    loadProfile()
+  }, [fetchProfile])
+
+
+  const logoutHandler = () => {
+        localStorage.removeItem('user')
+        localStorage.removeItem('token')
+        navigate('/')
+    }
 
   return (
     <>
       <div className="w-64 bg-white border-4 border-cyan-300 rounded-2xl p-4 space-y-4 text-black font-[spaceMono] z-10 absolute right-53 top-20">
         <div className="flex items-center space-x-3">
-          <FaUserCircle size={40} className="text-cyan-400" />
+          <img src={user?.image ? `${import.meta.env.VITE_BASE_URL}${user.image}` : import.meta.env.VITE_BASE_URL + '/assets/profile.svg'} size={50} className="text-cyan-400 h-20 max-h-30 max-w-30 object-center object-contain rounded-lg " />
+
           <div>
-            <h2 className="text-lg font-bold">John Doe</h2>
-            <p className="text-sm text-gray-500">john@example.com</p>
+            <h2 className="text-lg font-bold">{user?.firstName + ' ' + user?.lastName || 'John Doe'}</h2>
+            <p className="text-sm text-gray-500">{user?.email || 'john@example.com'}</p>
           </div>
         </div>
 
@@ -82,7 +118,7 @@ const Profile = () => {
           <span>Edit Personal Info</span>
         </div>
 
-        <button className="w-full bg-red-600 text-white py-2 rounded-xl flex items-center justify-center space-x-2 hover:bg-red-500 transition hover:cursor-pointer hover:scale-105 duration-250 ease-in-out">
+        <button onClick={logoutHandler} className="w-full bg-red-600 text-white py-2 rounded-xl flex items-center justify-center space-x-2 hover:bg-red-500 transition hover:cursor-pointer hover:scale-105 duration-250 ease-in-out">
           <FaSignOutAlt />
           <span>Logout</span>
         </button>
@@ -154,7 +190,7 @@ const Profile = () => {
             setProfilePic(null);
             }} 
             title="Change Profile Picture">
-          <div className="w-full flex flex-col items-center justify-center space-y-3">
+          <div className="w-full flex flex-col items-center justify-center space-y-3 hover:cursor-pointer">
             <form onSubmit={(e) => {
                 submitHandler(e);
                 setPicModalOpen(false);

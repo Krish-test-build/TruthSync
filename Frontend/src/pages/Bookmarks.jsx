@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import SideBar from '../components/SideBar'
 import upvote from '../assets/upvote.svg'
 import downvote from '../assets/downvote.svg'
 import Lenis from 'lenis'
+import axios from 'axios'
 
 const bookmarkedClaims = [
   {
@@ -25,8 +26,25 @@ const bookmarkedClaims = [
 ]
 
 const Bookmarks = () => {
+    const [bookmarks, setBookmarks] = useState(null)
     const scrollRef = useRef();
 
+    useEffect(() => {
+      const fetchBookmarks = async () => {
+        try {
+          const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/claim/bookmark`, { withCredentials: true });
+          const data = await response.json();
+          setBookmarks(data);
+        } catch (error) {
+          console.error('Error fetching bookmarks:', error);
+        }
+      };
+      fetchBookmarks();
+      
+    
+      
+    }, [])
+    
 
     useEffect(() => {
         if(!scrollRef.current) return

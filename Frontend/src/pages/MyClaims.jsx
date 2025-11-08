@@ -1,79 +1,122 @@
-import React, { useEffect, useRef, useState } from 'react';
-import SideBar from '../components/SideBar';
-import RightBar from '../components/RightBar';
-import { FaArrowUp, FaArrowDown, FaCommentDots } from 'react-icons/fa';
-import Comments from '../components/Comments';
-import Lenis from 'lenis';
-
-const dummyClaims = [
-  {
-    id: 1,
-    title: "Aliens Spotted in New York",
-    date: "2024-06-01",
-    source: "user123",
-    description: "Several witnesses claim to have seen UFOs hovering over Manhattan.",
-    media: { type: "image", url: "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80" },
-    upvotes: 12,
-    downvotes: 3,
-    comments: 5
-  },
-  {
-    id: 2,
-    title: "Water Turns to Wine in Local Church",
-    date: "2024-05-28",
-    source: "miracleGuy",
-    description: "A mysterious event occurred during Sunday mass.",
-    media: { type: "video", url: "https://www.w3schools.com/html/mov_bbb.mp4" },
-    upvotes: 8,
-    downvotes: 2,
-    comments: 2
-  },
-  {
-    id: 3,
-    title: "Cat Solves Rubik's Cube",
-    date: "2024-06-02",
-    source: "catlover",
-    description: "A viral video shows a cat allegedly solving a Rubik's cube.",
-    media: { type: "image", url: "https://images.unsplash.com/photo-1518717758536-85ae29035b6d?auto=format&fit=crop&w=400&q=80" },
-    upvotes: 20,
-    downvotes: 1,
-    comments: 10
-  }
-];
-
+import React, { useEffect, useRef, useState } from "react";
+import SideBar from "../components/SideBar";
+import RightBar from "../components/RightBar";
+import { FaCommentDots, FaEdit, FaTrash } from "react-icons/fa";
+import Comments from "../components/Comments";
+import Lenis from "lenis";
+import api from '../api/axiosConfig';
+import { Link } from "react-router-dom";
+import upvote from '../assets/upvote.svg';
+import downvote from '../assets/downvote.svg';
 
 const MyClaims = () => {
-  const [hydrated, setHydrated] = useState({}); 
+  const [hydrated, setHydrated] = useState({});
+  const [showNoCommentsPopup, setShowNoCommentsPopup] = useState(false);
+  const [claims, setClaims] = useState([]);
+  const [editingClaim, setEditingClaim] = useState(null);
+  const [editForm, setEditForm] = useState({ title: '', description: '' });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const commentsRef = useRef(null);
-  const scrollRef = useRef()
+  const scrollRef = useRef();
+
+  const fetchClaims = async () => {
+    try {
+      const res = await api.get('/claim/my-claims');
+      setClaims(res.data);
+    } catch (err) {
+      console.error("Error fetching claims:", err);
+    }
+  };
 
   useEffect(() => {
-        if(!scrollRef.current) return
+    fetchClaims();
+  }, []);
 
+  useEffect(() => {
+    if (!scrollRef.current) return;
 
-       const lenis = new Lenis({
-            wrapper: scrollRef.current,
-            content: scrollRef.current,
-            smooth: true,
-            duration:2,
-        });
-      function raf(time){
-        lenis.raf(time)
-        requestAnimationFrame(raf)
-      }
-    requestAnimationFrame(raf)
+    const lenis = new Lenis({
+      wrapper: scrollRef.current,
+      content: scrollRef.current,
+      smooth: true,
+      duration: 2,
+    });
+
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
 
     return () => {
-      lenis.destroy()
-    }
-      
-    }, []);
+      lenis.destroy();
+    };
+  }, []);
 
   const toggleComments = (id) => {
     setHydrated((prev) => ({
       ...prev,
-      [id]: !prev[id]
+      [id]: !prev[id],
     }));
+  };
+
+  const handleUpvote = async (id) => {
+    try {
+      await api.post(`/claim/${id}/vote`, { vote: 'upvote' });
+      setClaims((prev) =>
+        prev.map((claim) =>
+          claim._id === id ? { ...claim, upvotes: (claim.upvotes || 0) + 1 } : claim
+        )
+      );
+    } catch (err) {
+      console.error("Error upvoting:", err);
+    }
+  };
+
+  const handleDownvote = async (id) => {
+    try {
+      await api.post(`/claim/${id}/vote`, { vote: 'downvote' });
+      setClaims((prev) =>
+        prev.map((claim) =>
+          claim._id === id ? { ...claim, downvotes: (claim.downvotes || 0) + 1 } : claim
+        )
+      );
+    } catch (err) {
+      console.error("Error downvoting:", err);
+    }
+  };
+
+  const handleEdit = (claim) => {
+    setEditingClaim(claim._id);
+    setEditForm({ title: claim.title, description: claim.description });
+  };
+
+  const handleEditSubmit = async () => {
+    try {
+      await api.put(`/claim/update-claim/${editingClaim}`, editForm);
+      setClaims((prev) =>
+        prev.map((claim) =>
+          claim._id === editingClaim ? { ...claim, ...editForm } : claim
+        )
+      );
+      setEditingClaim(null);
+      alert('Claim updated successfully!');
+    } catch (err) {
+      console.error("Error updating claim:", err);
+      alert('Failed to update claim.');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await api.delete(`/claim/delete-claim/${id}`);
+      setClaims((prev) => prev.filter((claim) => claim._id !== id));
+      setShowDeleteConfirm(null);
+      alert('Claim deleted successfully!');
+    } catch (err) {
+      console.error("Error deleting claim:", err);
+      alert('Failed to delete claim.');
+    }
   };
 
   return (
@@ -88,72 +131,101 @@ const MyClaims = () => {
         />
       </div>
 
-      <div className="h-screen w-full flex items-center pl-6.5 p-4 -ml-0.5">
+      <div className="h-screen w-full flex items-center p-4 pl-6.5">
         <SideBar />
 
-        <div className="flex w-full h-full">    
-          <div  className="w-3/4 mt-2 h-[98%] flex flex-col border-4 border-white text-white px-8 py-2 pb-5 rounded-3xl shadow-lg shadow-purple-800 ml-20 bg-transparent overflow-y-auto scrollbar-hide font-[spaceMono]">
+        <div className="flex w-full h-full">
+          <div className="w-3/4 mt-2 h-[98%] flex flex-col border-4 border-white text-white px-8 py-2 pb-5 rounded-3xl shadow-lg shadow-purple-800 ml-20 bg-transparent overflow-y-auto scrollbar-hide font-[spaceMono]">
             <style>{`.scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
 
             <div
               className="text-[55px] tracking-wide font-bold -mt-2 flex items-start justify-start font-[monaco]"
-              style={{ textShadow: '3px 3px 2.5px #51E5F8' }}
+              style={{ textShadow: "3px 3px 2.5px #51E5F8" }}
             >
               My Claims
             </div>
+
             <div className="absolute top-27 rounded-3xl h-125.5 w-[59%] bg-gradient-to-b from-gray-400 to-black opacity-30 z-0"></div>
 
-            <div ref={scrollRef} className="w-full tracking-wide rounded-3xl border-5 border-cyan-400 z-2 flex flex-col gap-4 text-black shadow-md -mb-2 shadow-cyan-500 overflow-y-auto p-4 bg-transparent scrollbar-hide">
-              {dummyClaims.map(claim => (
-                <div
-                  key={claim.id}
-                  className="bg-transparent bg-opacity-20 rounded-3xl px-6 py-4 border-4 border-white shadow-xl flex flex-col gap-2 h-full transition duration-300 ease-in-out"
-                >
-                  <div className="flex justify-between items-center text-white">
-                    <div className="text-xl font-bold text-purple-500">{claim.title}</div>
-                    <div className="text-sm text-gray-300">{claim.date}</div>
-                  </div>
+            <div
+              ref={scrollRef}
+              className="w-full tracking-wide rounded-3xl border-5 border-cyan-400 z-2 flex flex-col gap-4 text-black shadow-md -mb-2 shadow-cyan-500 overflow-y-auto p-4 bg-transparent scrollbar-hide"
+            >
+              {claims.length > 0 ? (
+                claims.map((claim) => (
+                  <div
+                    key={claim._id}
+                    className="bg-transparent bg-opacity-20 rounded-3xl px-6 py-4 border-4 border-white shadow-xl flex flex-col gap-2 h-full transition duration-300 ease-in-out"
+                  >
+                    <div className="flex flex-row items-center justify-between">
+                      <Link to={`/claim/${claim._id}`}>
+                        <h1 className="text-[50px] tracking-wide text-gray-200 font-bold font-[monaco]" style={{ textShadow: '2px 2.5px 3px #51E5F8' }}>
+                          {claim.title}
+                        </h1>
+                      </Link>
+                      <div className="flex flex-row items-center space-x-2">
+                        <button
+                          onClick={() => handleUpvote(claim._id)}
+                          className="bg-red-700 flex flex-row p-2 rounded-full hover:bg-red-600 hover:scale-110 hover:cursor-pointer transition duration-300 ease-in-out active:scale-90"
+                        >
+                          <img src={upvote} alt="Upvote" className="h-4 w-4 mr-1 mt-0.5" /> {claim.upvotes || 0}
+                        </button>
+                        <button
+                          onClick={() => handleDownvote(claim._id)}
+                          className="bg-white hover:scale-110 hover:cursor-pointer transition duration-300 ease-in-out active:scale-90 p-2 flex flex-row text-black rounded-full hover:bg-gray-200"
+                        >
+                          <img src={downvote} alt="Downvote" className="h-4 w-4 mr-1 mt-0.5" /> {claim.downvotes || 0}
+                        </button>
+                        <button
+                          onClick={() => handleEdit(claim)}
+                          className="bg-yellow-500 p-2 rounded-full hover:bg-yellow-600 hover:scale-110 transition text-white"
+                        >
+                          <FaEdit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setShowDeleteConfirm(claim._id)}
+                          className="bg-red-500 p-2 rounded-full hover:bg-red-600 hover:scale-110 transition text-white"
+                        >
+                          <FaTrash className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
 
-                  <div className="text-sm text-white">
-                    Source: <span className="font-semibold">{claim.source}</span>
-                  </div>
+                    <div className="text-sm text-gray-300 -mt-4 mb-4">
+                      Posted on {new Date(claim.createdAt || claim.date).toLocaleDateString('en-GB')} by {claim.isAnonymous ? 'Anonymous' : claim.user?.username}
+                    </div>
 
-                  <div className="text-md text-white">{claim.description}</div>
+                    <div className="text-lg text-white">{claim.description}</div>
 
-                  <div className="w-full flex justify-center items-center mt-2">
-                    {claim.media.type === "image" ? (
-                      <img
-                        src={claim.media.url}
-                        alt="claim media"
-                        className="max-h-64 rounded-xl border-2 border-white shadow-lg"
-                      />
-                    ) : (
-                      <video controls className="max-h-64 rounded-xl hover:cursor-pointer border-2 border-white shadow-lg">
-                        <source src={claim.media.url} type="video/mp4" />
-                        Your browser does not support the video tag.
-                      </video>
+                    {claim.image && (
+                      <div className="w-full flex justify-center items-center mt-2">
+                        <img
+                          src={`${import.meta.env.VITE_BASE_URL}${claim.image}`}
+                          alt="Claim Media"
+                          className="max-h-64 rounded-xl border-2 border-white shadow-lg"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-5 mt-3">
+                      <button
+                        onClick={() => toggleComments(claim._id)}
+                        className="flex items-center gap-2 bg-blue-700 p-2 rounded-full hover:bg-blue-600 hover:scale-110 tracking-wide hover:cursor-pointer transition text-white font-bold"
+                      >
+                        <FaCommentDots className="h-4 w-4" /> {claim.comments || 0} Comments
+                      </button>
+                    </div>
+
+                    {hydrated[claim._id] && (
+                      <div ref={commentsRef} className="-mt-2 z-5">
+                        <Comments claimId={claim._id} onNoComments={() => setShowNoCommentsPopup(true)} onCommentAdded={fetchClaims} />
+                      </div>
                     )}
                   </div>
-
-                  <div className="flex items-center gap-5 mt-3 z-5">
-                    <button className="flex items-center gap-1 bg-red-700 px-3 py-2 rounded-full hover:bg-red-600 hover:scale-110 transition text-white font-bold hover:cursor-pointer">
-                      <img src="./src/assets/upvote.svg" alt="Upvote" className="h-4 w-4"/> {claim.upvotes}
-                    </button>
-                    <button className="flex items-center gap-1 bg-white px-3 py-2 rounded-full hover:bg-gray-300 hover:scale-110 transition hover:cursor-pointer text-red-700 font-bold">
-                      <img src="./src/assets/downvote.svg" alt="downvote" className="h-4 w-4"/> {claim.downvotes}
-                    </button>
-                    <button onClick={() => toggleComments(claim.id)} className="flex items-center gap-2 bg-blue-700 p-2 rounded-full hover:bg-blue-600 hover:scale-110 tracking-wide hover:cursor-pointer transition text-white font-bold">
-                      <FaCommentDots className="h-4 w-4" /> {claim.comments} Comments
-                    </button>
-                  </div>
-
-                  {hydrated[claim.id] && (
-                    <div ref={commentsRef} className='-mt-2 z-5'>
-                      <Comments />
-                    </div>
-                  )}
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="text-white">No claims yet.</div>
+              )}
             </div>
           </div>
 
@@ -162,6 +234,80 @@ const MyClaims = () => {
           </div>
         </div>
       </div>
+
+      {showNoCommentsPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h2 className="text-lg font-bold mb-4">No Comments Yet</h2>
+            <p>This claim has no comments yet. Be the first to add one!</p>
+            <button
+              onClick={() => setShowNoCommentsPopup(false)}
+              className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {editingClaim && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h2 className="text-lg font-bold mb-4">Edit Claim</h2>
+            <input
+              type="text"
+              value={editForm.title}
+              onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+              placeholder="Title"
+              className="w-full p-2 mb-2 border rounded"
+            />
+            <textarea
+              value={editForm.description}
+              onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+              placeholder="Description"
+              className="w-full p-2 mb-4 border rounded"
+              rows={4}
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleEditSubmit}
+                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => setEditingClaim(null)}
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h2 className="text-lg font-bold mb-4">Confirm Delete</h2>
+            <p>Are you sure you want to delete this claim? This action cannot be undone.</p>
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => handleDelete(showDeleteConfirm)}
+                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

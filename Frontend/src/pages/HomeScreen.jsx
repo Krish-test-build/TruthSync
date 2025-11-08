@@ -1,105 +1,137 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import gsap from 'gsap';
-import { useGSAP } from '@gsap/react';
-import Profile from '../components/Profile';
-import SideBar from '../components/SideBar';
-import RightBar from '../components/RightBar';
-import Lenis from 'lenis';
-
+import React, { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import gsap from 'gsap'
+import { useGSAP } from '@gsap/react'
+import Profile from '../components/Profile'
+import SideBar from '../components/SideBar'
+import RightBar from '../components/RightBar'
+import Lenis from 'lenis'
+import api from '../api/axiosConfig'
 
 const HomeScreen = () => {
-    const categoryRef = useRef(null);
-    const profileRef = useRef(null);
-    const [categoryOpen, setCategoryOpen] = useState(false)
-    const [profileOpen, setProfileOpen] = useState(false)
-    const scrollRef = useRef()
+  const scrollRef = useRef(null)
+  const profileRef = useRef(null)
+  const [claims, setClaims] = useState([])
+  const [category, setCategory] = useState('')
+  const [search, setSearch] = useState('')
+  const [sortTop, setSortTop] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
 
+  useEffect(() => {
+    if (!scrollRef.current) return
+    const lenis = new Lenis({ wrapper: scrollRef.current, content: scrollRef.current, smooth: true })
+    const frame = (time) => { lenis.raf(time); requestAnimationFrame(frame) }
+    const rafId = requestAnimationFrame(frame)
+    return () => { cancelAnimationFrame(rafId); lenis.destroy() }
+  }, [])
 
-    useEffect(() => {
-        if(!scrollRef.current) return
-
-
-       const lenis = new Lenis({
-            wrapper: scrollRef.current,
-            content: scrollRef.current,
-            smooth: true,
-        });
-      function raf(time){
-        lenis.raf(time)
-        requestAnimationFrame(raf)
-      }
-    requestAnimationFrame(raf)
-
-    return () => {
-      lenis.destroy()
+  const fetchClaims = async () => {
+    try {
+      let url = `/claim/sort?sort=${sortTop ? 'TopClaims' : 'MostRecent'}`
+      if (category) url = `/claim/filterby/${category}`
+      const res = await api.get(url, { withCredentials: true })
+      setClaims(res.data.claim || res.data)
+    } catch (err) {
+      console.error("Error fetching claims:", err)
     }
-      
-    }, []);
-    
-        
+  }
 
+  useEffect(() => { fetchClaims() }, [category, sortTop])
 
-    useGSAP( () => {
-        gsap.to(
-          profileRef.current,
-          {
-            opacity: profileOpen ? '1' : '0',
-            duration: 0.3,
-            ease: 'power3.inOut',
-          }
-        )
-       },[profileOpen]);
-    
+  useGSAP(() => {
+    gsap.to(profileRef.current, { opacity: profileOpen ? 1 : 0, duration: 0.3, ease: "power3.inOut" })
+  }, [profileOpen])
+
+  const formatDate = (isoString) => new Date(isoString).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })
+
+  const handleCategoryClick = (cat) => { setCategory(cat); setSortTop(false) }
+  const handleTopClaimsClick = () => { setSortTop(true); setCategory('') }
+  const homeClick = () => { setSortTop(false); setCategory('') }
+
+  const handleUpvote = async (id) => { await api.post(`/claim/${id}/upvote`, {}); setSortTop(sortTop) }
+  const handleDownvote = async (id) => { await api.post(`/claim/${id}/downvote`, {}); setSortTop(sortTop) }
+  const handleBookmark = async (id, bookmarked) => {
+    if (bookmarked) await api.delete(`/claim/${id}/bookmark`)
+    else await api.post(`/claim/${id}/bookmark`, {})
+    setSortTop(sortTop)
+  }
+
+  const filteredClaims = claims.filter(c =>
+    c.title?.toLowerCase().includes(search.toLowerCase()) &&
+    (category ? c.category === category : true)
+  )
+
+  const sortedClaims = sortTop
+    ? [...filteredClaims].sort((a, b) =>
+        ((b.upvotes?.length || 0) + (b.downvotes?.length || 0)) -
+        ((a.upvotes?.length || 0) + (a.downvotes?.length || 0))
+      )
+    : filteredClaims
 
   return (
     <>
       <div className="fixed top-0 left-0 w-full h-screen -z-10">
-        <video
-          autoPlay
-          loop
-          muted
-          className="w-full h-full object-cover"
-          src="https://video.wixstatic.com/video/f1c650_988626917c6549d6bdc9ae641ad3c444/720p/mp4/file.mp4"
-        />
+        <video autoPlay loop muted className="w-full h-full object-cover" src="https://video.wixstatic.com/video/f1c650_988626917c6549d6bdc9ae641ad3c444/720p/mp4/file.mp4" />
       </div>
 
       <div className="h-screen w-full flex justify-between items-center p-4">
-        <SideBar />
+        <SideBar onCategoryClick={handleCategoryClick} onTopClaimsClick={handleTopClaimsClick} onHomeClick={homeClick} />
 
         <div className="flex flex-col w-3/4 space-y-6 items-center">
           <div className="flex justify-between w-full px-10 ml-5 mt-3">
             <div className="relative w-2/3 ml-7">
               <img src="./src/assets/search.svg" alt="Search" className="absolute top-1/2 mt-3 left-4 transform -translate-y-1/2 h-5 w-5" />
-              <input type="text" placeholder="Search" className="caret-black text-black bg-white border-2 border-white rounded-full w-full pl-10 pr-4 py-2 mt-6 focus:bg-white focus:text-black focus:caret-black font-[SpaceMono]"/>
+              <input
+                type="text"
+                placeholder="Search"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="caret-black text-black bg-white border-2 border-white rounded-full w-full pl-10 pr-4 py-2 mt-6 focus:bg-white focus:text-black focus:caret-black font-[SpaceMono]"
+              />
             </div>
-            <Link to={'/newClaim'} className="bg-gray-200 mr-15 text-black text-3xl px-6 py-1 mt-6 rounded-2xl font-[monaco] hover:scale-105 transition hover:cursor-pointer">New Claim</Link>
+            <Link to="/newClaim" className="bg-gray-200 mr-15 text-black text-3xl px-6 py-1 mt-6 rounded-2xl font-[monaco] hover:scale-105 transition hover:cursor-pointer">New Claim</Link>
           </div>
 
-          <h2 className="text-white text-2xl font-bold font-[SpaceMono] ">Top Claims</h2>
+          <h2 className="text-white text-2xl font-bold font-[SpaceMono]">
+            {sortTop ? "Top Claims" : category ? `${category} Claims` : "All Claims"}
+          </h2>
 
-          <div ref={scrollRef}  className="grid grid-cols-2 gap-4 gap-x-6 w-full h-120 px-10 drop-shadow-lg drop-shadow-purple-800 overflow-y-auto ">
-            {[1,2,3,4,5,6].map(index => (
-              <div key={index} className="bg-[#2a2a2a] text-white rounded-2xl p-4 space-y-3 font-[SpaceMono]">
+          <div ref={scrollRef} className="grid grid-cols-2 gap-4 gap-x-6 w-full max-h-120 h-120 px-10 overflow-y-auto drop-shadow-lg drop-shadow-purple-800">
+            {sortedClaims.map(claim => (
+              <div key={claim._id} className="bg-[#2a2a2a] text-white rounded-2xl p-4 space-y-3 flex flex-col justify-between h-68 font-[SpaceMono]">
                 <div className="flex justify-between text-sm">
-                  <h3>Claim Title</h3>
-                  <span>AI Summary (agree/disagree %)</span>
+                  <h3>{claim.title}</h3>
+                  <span>{claim.aiSummary || "AI Summary (TBD)"}</span>
                 </div>
 
-                <div className="bg-white text-black h-32 rounded-lg flex justify-center items-center">
-                  Claim img/vid
+                {claim.image && claim.image.endsWith(".mp4") ? (
+                  <video src={`${import.meta.env.VITE_BASE_URL}${claim.image}`} controls className="w-full h-32 rounded-lg object-cover" />
+                ) : claim.image ? (
+                  <img src={`${import.meta.env.VITE_BASE_URL}${claim.image}`} alt="Claim Media" className="max-w-full h-32 rounded-lg object-cover" />
+                ) : (
+                  <p className="text-lg text-white">{claim.description}</p>
+                )}
+
+                <div className="flex justify-between text-xs opacity-70">
+                  <span>{formatDate(claim.createdAt)}</span>
+                  <span>{claim.category || "Uncategorized"}</span>
                 </div>
 
                 <div className="flex flex-row items-center space-x-2">
-                  <button className="bg-red-700 flex flex-row p-2 rounded-full hover:bg-red-600  hover:cursor-pointer">
-                    <img src="./src/assets/upvote.svg" alt="Upvote" className="h-4 w-4 mr-1 mt-0.5"/> 5
+                  <button className="bg-red-700 flex flex-row p-2 rounded-full hover:bg-red-600 hover:cursor-pointer" onClick={() => handleUpvote(claim._id)}>
+                    <img src="./src/assets/upvote.svg" alt="Upvote" className="h-4 w-4 mr-1 mt-0.5" /> {claim.upvotes?.length || 0}
                   </button>
-                  <button className="bg-white p-2 flex flex-row text-black rounded-full hover:bg-gray-300 hover:cursor-pointer">
-                    <img src="./src/assets/downvote.svg" alt="Downvote" className="h-4 w-4 mr-1 mt-0.5"/> 2
+
+                  <button className="bg-white p-2 flex flex-row text-black rounded-full hover:bg-gray-300 hover:cursor-pointer" onClick={() => handleDownvote(claim._id)}>
+                    <img src="./src/assets/downvote.svg" alt="Downvote" className="h-4 w-4 mr-1 mt-0.5" /> {claim.downvotes?.length || 0}
                   </button>
-                  <Link to={'/claim/:id'} className="ml-auto flex items-center hover:scale-115 transition">
-                    Open
-                    <img src="./src/assets/open.svg" alt="Open" className=" bg-white h-5 w-5 ml-1 mt-1"/>
+
+                  <button className={`ml-2 p-2 rounded-full ${claim.bookmarked ? 'bg-yellow-400' : 'bg-gray-200'} hover:scale-110`} onClick={() => handleBookmark(claim._id, claim.bookmarked)}>
+                    <img src="./src/assets/bookmark.png" alt="Bookmark" className="h-4 w-4" />
+                  </button>
+
+                  <Link to={`/claim/${claim._id}`} className="ml-auto flex items-center hover:scale-115 transition">
+                    Open <img src="./src/assets/open.svg" alt="Open" className="bg-white h-5 w-5 ml-1 mt-1" />
                   </Link>
                 </div>
               </div>
@@ -108,17 +140,11 @@ const HomeScreen = () => {
         </div>
 
         <div className="h-full w-48 flex flex-col items-center justify-between py-6">
-          <RightBar/>
+          <RightBar />
+        </div>
       </div>
-
-      </div>
-              
-
-        
-
     </>
-   
-  );
-};
+  )
+}
 
-export default HomeScreen;
+export default HomeScreen

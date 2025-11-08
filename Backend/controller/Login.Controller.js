@@ -17,9 +17,12 @@ module.exports.loginUser = async (req, res) => {
     const token = user.generateToken(); 
 
     res.cookie('token', token, {
-      httpOnly: true,
-      maxAge: 1000 * 60 * 60 * 24
-    });
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production' ? true : false,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 1000 * 60 * 60 * 24
+  });
+
     if(!isAdmin) return res.status(200).json({ message: 'Login successful' });
     else return res.status(200).json({ message: 'Login successful Admin', isAdmin });
   } catch (error) {

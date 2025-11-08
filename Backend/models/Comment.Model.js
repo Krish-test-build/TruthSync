@@ -11,7 +11,12 @@ const commentSchema = new mongoose.Schema({
     },
     comments: {
         type: String,
-        required: true
+    },
+    image: {
+        type: String, 
+    },
+    video: {
+        type: String, 
     }
 }, {timestamps: true});
 

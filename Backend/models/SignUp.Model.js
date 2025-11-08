@@ -26,17 +26,20 @@ const SignUpModel = new mongoose.Schema({
 
   },
   password: {
-    type: String, 
-    required: true,
-    select:false,
+  type: String,
+  required: function() {
+    return !this.googleId; 
+  },  select:false,
     
     },
   image: {
   type: String,
   default: defaultImage
-}
-
-
+  },
+  bookmarks: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Claim'
+  }]
 },{timestamps: true});
 
 SignUpModel.statics.hashPassword = async (password) => {

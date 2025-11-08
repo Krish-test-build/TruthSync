@@ -10,17 +10,15 @@ const Home = () => {
   const [modelReady, setModelReady] = useState(false);
 
   useEffect(() => {
-    // Simulate a loading time for the 3D model
     const timer = setTimeout(() => {
       setModelReady(true);
-    }, 500); // Adjust this time as needed
+    }, 500); 
 
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
     if (modelReady) {
-      // Set loaded to true after the model is ready
       setLoaded(true);
     }
   }, [modelReady]);

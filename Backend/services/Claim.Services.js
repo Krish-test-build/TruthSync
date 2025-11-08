@@ -19,12 +19,12 @@ module.exports.newClaim = async (data) => {
 };
 
 module.exports.getClaim = async (id) => {
-  const claim = await claimModel.find({ user: id });
+  const claim = await claimModel.find({ user: id }).populate('user');
   return claim;
 };
 
 module.exports.getClaimById = async (id) => {
-  const claim = await claimModel.findById(id);
+  const claim = await claimModel.findById(id).populate('user');
   return claim;
 };
 module.exports.updateClaim = async (id, data) => {

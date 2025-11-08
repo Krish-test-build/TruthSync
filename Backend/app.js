@@ -11,12 +11,15 @@ const notificationRoutes=require('./routes/Notification.routes')
 const cookieParser=require('cookie-parser');
 const cors=require('cors');
 const connectDB=require('./db/MyDb')
+const authRoutes=require('./routes/auth.routes');
+const path = require('path');
+
 
 
 connectDB()
 app.use(cors({
-    origin:true,
-    credentials:true
+    origin: 'http://localhost:5173', 
+    credentials: true
 }))
 
 app.use(express.json());
@@ -25,12 +28,13 @@ app.use(cookieParser());
 
 
 
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(userRoutes);    
 app.use(publicRoutes);
 app.use('/claim',claimRoutes);
 app.use('/admin',adminRoutes);
 app.use(voteRoutes)
 app.use('/notifications',notificationRoutes)
+app.use('/', authRoutes);
 
 module.exports=app

@@ -14,23 +14,13 @@ const Galaxy = () => {
     loader.setDRACOLoader(dracoLoader);
   });
 
-  useEffect(() => {
-    if (!gltf.scene) return;
-
-    gltf.scene.traverse((child) => {
-      if (child.isMesh) {
-        if (child.material.map) {
-          child.material.map.encoding = THREE.sRGBEncoding;
-        }
-        child.material.needsUpdate = true;
-      }
-    });
+useEffect(() => {
+  (async () => {
+    const BufferGeometryUtils = await import('three/examples/jsm/utils/BufferGeometryUtils.js');
 
     const geometries = [];
     gltf.scene.traverse((child) => {
-      if (child.isMesh && child.geometry) {
-        geometries.push(child.geometry);
-      }
+      if (child.isMesh && child.geometry) geometries.push(child.geometry);
     });
 
     if (geometries.length === 0) return;
@@ -46,7 +36,9 @@ const Galaxy = () => {
     } catch (error) {
       console.error('Error merging geometries:', error);
     }
-  }, [gltf]);
+  })();
+}, [gltf]);
+
 
   useFrame(() => {
     if (centerGroupRef.current) {

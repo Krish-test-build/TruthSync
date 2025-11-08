@@ -24,7 +24,7 @@ module.exports.signUpUser = async (req, res) => {
         req.body.password = hashPassword;
 
         const { firstName, lastName, username, email, password } = req.body;
-        const image = req.file ? req.file.filename : defaultImage;
+        const image= req.file ? `/uploads/${req.file.filename}` : defaultImage;
         const user = await SignUpServices.signup({ firstName, lastName, username, email, password:hashPassword,image });
 
         res.status(201).json({ user });

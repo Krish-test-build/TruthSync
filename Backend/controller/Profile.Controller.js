@@ -1,11 +1,11 @@
 const UserModel = require("../models/SignUp.Model");
-const {defaultImage} = require('../config/Default.config');
+  const {defaultImage} = require('../config/Default.config');
 
 
 
 module.exports.getProfile = async (req, res) => {
   try {
-    const { _id, firstName, lastName, username, email, createdAt } = req.user;
+    const { _id, firstName, lastName, username, email, createdAt, image } = req.user;
     res.status(200).json({ _id, firstName, lastName,image: image || defaultImage, username, email, createdAt });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -43,7 +43,7 @@ module.exports.updateProfile = async (req, res) => {
             email,
         }
         if (req.file) {
-        updateData.image = req.file.filename;
+          updateData.image = `/uploads/${req.file.filename}`;
         }
 
         const updated =   await UserModel.findByIdAndUpdate(req.user._id,updateData,{new:true});
