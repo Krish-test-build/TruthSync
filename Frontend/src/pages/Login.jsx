@@ -8,6 +8,14 @@ const Login = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState(''); // 'success' or 'error'
+
+  const showMessage = (msg, type) => {
+    setMessage(msg);
+    setMessageType(type);
+    setTimeout(() => setMessage(''), 3000); // Hide after 3 seconds
+  };
 
   const submitHandler = async (e) => {
     e.preventDefault();
@@ -25,6 +33,9 @@ const Login = () => {
       setPassword('');
     } catch (err) {
       console.error('Login error:', err.response?.data || err.message);
+      showMessage('Incorrect Username or Password', 'error');
+      setUsername('');
+      setPassword('');
     }
   };
 
@@ -43,6 +54,7 @@ const Login = () => {
       }
     } catch (err) {
       console.error('Google sign-in failed:', err);
+      showMessage('Google sign-in failed. Please try again.', 'error');
     }
   };
 
@@ -57,6 +69,12 @@ const Login = () => {
           src="https://video.wixstatic.com/video/f1c650_988626917c6549d6bdc9ae641ad3c444/720p/mp4/file.mp4"
         />
       </div>
+
+      {message && (
+        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${messageType === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`}>
+          {message}
+        </div>
+      )}
 
       <Link to="/">
         <img

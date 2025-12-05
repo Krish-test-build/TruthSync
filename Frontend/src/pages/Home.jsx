@@ -31,11 +31,7 @@ const Home = () => {
         </div>
       ) : (
         <>
-          <div className='z-4 h-50 w-50 absolute top-5 left-5 rounded-full blur-[2px] opacity-95 shadow-xl shadow-[#F2CF81]'>
-            <Canvas>
-              <Moon />
-            </Canvas>
-          </div>
+          
           <div className='flex flex-col justify-center items-center p-0 overflow-hidden'>
             <div className="shadow-lg shadow-gray-500 h-screen w-full relative overflow-hidden">
               <video
@@ -44,9 +40,9 @@ const Home = () => {
               ></video>
             </div>
 
-            <div className="absolute bg-black brightness-110 border-6 border-white h-45 w-250 flex rounded-2xl items-center text-[#dbdbdb] font-bold z-5 text-center mix-blend-lighten -translate-y-1/4">
+            <div className="absolute bg-black brightness-110 border-6  border-white h-45 w-250 flex rounded-2xl items-center text-[#dbdbdb] font-bold z-5 text-center mix-blend-lighten -translate-y-1/2">
               <h1
-                className="relative left-1/2 -translate-x-1/2 font-bold text-[150px] uppercase font-[monaco] tracking-widest"
+                className="relative left-1/2 -translate-x-1/2  font-bold text-[150px] uppercase font-[monaco] tracking-widest"
                 style={{
                   textShadow: '0 0 10px rgba(0, 255, 255, 0.8), 0 0 30px rgba(0, 255, 255, 0.6)',
                 }}
@@ -55,12 +51,12 @@ const Home = () => {
               </h1>
             </div>
 
-            <div className="absolute bg-transparent drop-shadow-xl drop-shadow-cyan-300 -translate-y-1/4 border-6 border-white h-45 w-250 flex rounded-2xl items-center text-white text-2xl font-bold z-5 text-center">
+            <div className="absolute bg-transparent drop-shadow-xl drop-shadow-cyan-300 -translate-y-1/2 border-6 border-white h-45 w-250 flex rounded-2xl items-center text-white text-2xl font-bold z-5 text-center">
             </div>
           </div>
 
           <div className='z-3 h-screen w-screen absolute top-0 left-1/2 -translate-x-1/2'>
-            <Canvas camera={{ fov: 50, position: [0, 0, 30] }}>
+            <Canvas camera={{ fov: 50, position: [0, 5, 30] }}>
               <Galaxy />
               <EffectComposer>
                 <Bloom intensity={1} luminanceThreshold={0} luminanceSmoothing={1.2} height={300} />

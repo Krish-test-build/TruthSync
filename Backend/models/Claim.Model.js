@@ -21,6 +21,9 @@ const ClaimSchema = new mongoose.Schema({
         enum:['Politics','Health','Education','Entertainment','Science and Tech','Finance','Sports','Miscellaneous'],
         required: true
     },
+    upvote: { type: Number, default: 0 },
+    downvote: { type: Number, default: 0 },
+
     date: {
         type: Date,
         default: Date.now

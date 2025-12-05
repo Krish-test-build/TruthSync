@@ -11,6 +11,9 @@ const Claim = () => {
   const [comments, setComments] = useState([])
   const [newComment, setNewComment] = useState('')
   const [isWide, setIsWide] = useState(false)
+  const [userVotes, setUserVotes] = useState({})
+  const [message, setMessage] = useState('')
+  const [messageType, setMessageType] = useState('')
   const imgRef = useRef(null)
 
   useEffect(() => {
@@ -18,6 +21,7 @@ const Claim = () => {
       try {
         const claimRes = await axios.get(`${import.meta.env.VITE_BASE_URL}/claim/${id}`, { withCredentials: true })
         setClaim(claimRes.data)
+        setUserVotes({ [id]: claimRes.data.userVote || null })
 
         const commentsRes = await axios.get(`${import.meta.env.VITE_BASE_URL}/claim/${id}/comments`, { withCredentials: true })
         setComments(commentsRes.data.comments)
@@ -27,6 +31,37 @@ const Claim = () => {
     }
     fetchData()
   }, [id])
+
+  const showMessage = (msg, type) => {
+    setMessage(msg)
+    setMessageType(type)
+    setTimeout(() => setMessage(''), 3000)
+  }
+
+  const handleVote = async (voteType) => {
+    try {
+      const res = await axios.post(`${import.meta.env.VITE_BASE_URL}/claim/${id}/vote`, { vote: voteType }, { withCredentials: true })
+      const { message, upvote, downvote } = res.data
+      setClaim((prev) => ({ ...prev, upvote, downvote }))
+      if (message === 'Vote removed') {
+        setUserVotes((prev) => ({ ...prev, [id]: null }))
+        showMessage('Vote removed!', 'success')
+      } else {
+        setUserVotes((prev) => ({ ...prev, [id]: voteType }))
+        showMessage(`Claim ${voteType}d!`, 'success')
+      }
+    } catch (err) {
+      console.error(err)
+      showMessage('Failed to update vote.', 'error')
+    }
+  }
+
+  const handleUpvote = () => handleVote('upvote')
+  const handleDownvote = () => handleVote('downvote')
+
+  const handleCommentAdded = () => {
+    setClaim((prev) => ({ ...prev, comments: (prev.comments || 0) + 1 }))
+  }
 
   const handleAddComment = async () => {
     if (!newComment.trim()) return
@@ -39,6 +74,7 @@ const Claim = () => {
       const commentsRes = await axios.get(`${import.meta.env.VITE_BASE_URL}/claim/${id}/comments`, { withCredentials: true })
       setComments(commentsRes.data.comments)
       setNewComment('')
+      handleCommentAdded()
     } catch (err) {
       console.error(err)
     }
@@ -58,6 +94,12 @@ const Claim = () => {
         />
       </div>
 
+      {message && (
+        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${messageType === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`}>
+          {message}
+        </div>
+      )}
+
       <div className="h-screen w-full pl-6.5 flex items-center p-4 -ml-0.5">
         <SideBar />
 
@@ -71,11 +113,17 @@ const Claim = () => {
                 {claim.title}
               </h1>
               <div className="flex flex-row items-center space-x-2">
-                <button className="bg-red-700 flex flex-row p-2 rounded-full hover:bg-red-600 hover:scale-110 hover:cursor-pointer transition duration-300 ease-in-out active:scale-90">
-                  <img src={upvote} alt="Upvote" className="h-4 w-4 mr-1 mt-0.5" /> 5
+                <button
+                  className={`flex flex-row p-2 rounded-full hover:cursor-pointer transition-all ease-in-out delay-50 hover:scale-105 ${userVotes[id] === 'upvote' ? 'bg-red-900' : 'bg-red-700 hover:bg-red-600'}`}
+                  onClick={handleUpvote}
+                >
+                  <img src={upvote} alt="Upvote" className="h-4 w-4 mr-1 mt-0.5" /> {claim.upvote || 0}
                 </button>
-                <button className="bg-white hover:scale-110 hover:cursor-pointer transition duration-300 ease-in-out active:scale-90 p-2 flex flex-row text-black rounded-full hover:bg-gray-200">
-                  <img src={downvote} alt="Downvote" className="h-4 w-4 mr-1 mt-0.5" /> 2
+                <button
+                  className={`p-2 flex flex-row rounded-full hover:cursor-pointer transition-all ease-in-out delay-50 hover:scale-105 ${userVotes[id] === 'downvote' ? 'bg-gray-900' : 'bg-white hover:bg-gray-300 text-black'}`}
+                  onClick={handleDownvote}
+                >
+                  <img src={downvote} alt="Downvote" className="h-4 w-4 mr-1 mt-0.5" /> {claim.downvote || 0}
                 </button>
               </div>
             </div>
@@ -86,16 +134,27 @@ const Claim = () => {
 
             <div className={`flex ${isWide ? "justify-center items-center" : "items-start"}`}>
               {claim?.image ? (
-                <img
-                  ref={imgRef}
-                  src={`${import.meta.env.VITE_BASE_URL}${claim.image}`}
-                  alt="Claim Media"
-                  className="max-h-96 max-w-full object-contain rounded-xl border-2 border-white shadow-md"
-                  onLoad={() => {
-                    if (imgRef.current?.naturalWidth >= 700) setIsWide(true)
-                    else setIsWide(false)
-                  }}
-                />
+                claim.image.endsWith('.mp4') ||
+                claim.image.endsWith('.mp3') ||
+                claim.image.endsWith('.webm') ||
+                claim.image.endsWith('.ogg')? (
+                  <video
+                    src={`${import.meta.env.VITE_BASE_URL}${claim.image}`}
+                    controls
+                    className="max-h-96 max-w-full object-contain rounded-xl border-2 border-white shadow-md"
+                  />
+                ) : (
+                  <img
+                    ref={imgRef}
+                    src={`${import.meta.env.VITE_BASE_URL}${claim.image}`}
+                    alt="Claim Media"
+                    className="max-h-96 max-w-full object-contain rounded-xl border-2 border-white shadow-md"
+                    onLoad={() => {
+                      if (imgRef.current?.naturalWidth >= 700) setIsWide(true)
+                      else setIsWide(false)
+                    }}
+                  />
+                )
               ) : (
                 <p className="text-lg text-white">{claim.description}</p>
               )}
@@ -105,15 +164,15 @@ const Claim = () => {
               <p className="text-lg text-white font-{spaceMono}">{claim.description}</p>
             </div>
 
-            <div className="mt-0 mb-2 text-3xl font-bold font-[monaco]" style={{ textShadow: '2px 2px 2px #51E5F8' }}>
-              Comments
+            <div className="mt-0.5 mb-1 text-4xl font-bold font-[monaco]" style={{ textShadow: '2px 2px 2px #51E5F8' }}>
+              Comments ({claim.comments || 0})
             </div>
 
             <div className="flex flex-col gap-4 text-black">
               {comments.map((comment) => (
                 <div key={comment._id} className="bg-white bg-opacity-20 rounded-2xl p-4 border-2 border-cyan-300 shadow-md text-black">
-                  <div className="flex justify-between ml-2 mr-5">
-                    <div>{comment.user?.username || 'Unknown'}</div>
+                  <div className="flex justify-between ml-2 mr-5 text-purple-600 font-extrabold">
+                    <div>{comment.user?.username || 'Anonymous'}</div>
                     <div className="text-sm text-gray-600 opacity-70">
                       {new Date(comment.createdAt).toLocaleDateString('en-GB')}
                     </div>

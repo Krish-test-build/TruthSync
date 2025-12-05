@@ -13,9 +13,12 @@ const MyClaims = () => {
   const [hydrated, setHydrated] = useState({});
   const [showNoCommentsPopup, setShowNoCommentsPopup] = useState(false);
   const [claims, setClaims] = useState([]);
+  const [userVotes, setUserVotes] = useState({}); // { claimId: 'upvote' | 'downvote' | null }
   const [editingClaim, setEditingClaim] = useState(null);
   const [editForm, setEditForm] = useState({ title: '', description: '' });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState(''); // 'success' or 'error'
   const commentsRef = useRef(null);
   const scrollRef = useRef();
 
@@ -23,6 +26,12 @@ const MyClaims = () => {
     try {
       const res = await api.get('/claim/my-claims');
       setClaims(res.data);
+      // Set user votes from response
+      const votes = {};
+      res.data.forEach(claim => {
+        votes[claim._id] = claim.userVote || null;
+      });
+      setUserVotes(votes);
     } catch (err) {
       console.error("Error fetching claims:", err);
     }
@@ -60,62 +69,77 @@ const MyClaims = () => {
     }));
   };
 
-  const handleUpvote = async (id) => {
+  const showMessage = (msg, type) => {
+    setMessage(msg);
+    setMessageType(type);
+    setTimeout(() => setMessage(''), 3000);
+  };
+
+  const handleVote = async (id, voteType) => {
     try {
-      await api.post(`/claim/${id}/vote`, { vote: 'upvote' });
+      const res = await api.post(`/claim/${id}/vote`, { vote: voteType });
+      const { message, upvote, downvote } = res.data;
       setClaims((prev) =>
         prev.map((claim) =>
-          claim._id === id ? { ...claim, upvotes: (claim.upvotes || 0) + 1 } : claim
+          claim._id === id ? { ...claim, upvote, downvote } : claim
         )
       );
+      if (message === 'Vote removed') {
+        setUserVotes((prev) => ({ ...prev, [id]: null }));
+        showMessage('Vote removed!', 'success');
+      } else {
+        setUserVotes((prev) => ({ ...prev, [id]: voteType }));
+        showMessage(`Claim ${voteType}d!`, 'success');
+      }
     } catch (err) {
-      console.error("Error upvoting:", err);
+      console.error("Error voting:", err);
+      showMessage('Failed to update vote.', 'error');
     }
   };
 
-  const handleDownvote = async (id) => {
-    try {
-      await api.post(`/claim/${id}/vote`, { vote: 'downvote' });
-      setClaims((prev) =>
-        prev.map((claim) =>
-          claim._id === id ? { ...claim, downvotes: (claim.downvotes || 0) + 1 } : claim
-        )
-      );
-    } catch (err) {
-      console.error("Error downvoting:", err);
-    }
-  };
+  const handleUpvote = (id) => handleVote(id, 'upvote');
+  const handleDownvote = (id) => handleVote(id, 'downvote');
 
   const handleEdit = (claim) => {
     setEditingClaim(claim._id);
     setEditForm({ title: claim.title, description: claim.description });
   };
-
-  const handleEditSubmit = async () => {
-    try {
-      await api.put(`/claim/update-claim/${editingClaim}`, editForm);
-      setClaims((prev) =>
-        prev.map((claim) =>
-          claim._id === editingClaim ? { ...claim, ...editForm } : claim
-        )
-      );
-      setEditingClaim(null);
-      alert('Claim updated successfully!');
-    } catch (err) {
-      console.error("Error updating claim:", err);
-      alert('Failed to update claim.');
-    }
+   const handleCommentAdded = (claimId) => {
+    setClaims((prev) =>
+      prev.map((claim) =>
+        claim._id === claimId ? { ...claim, comments: (claim.comments || 0) + 1 } : claim
+      )
+    );
   };
+
+ 
+  const handleEditSubmit = async () => {
+  try {
+    const res = await api.put(`/claim/update-claim/${editingClaim}`, editForm, {
+      headers: editForm instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : {}
+    });
+    const updated = res.data.claim; 
+    setClaims(prev =>
+      prev.map(claim => claim._id === editingClaim ? updated : claim)
+    );
+    setEditingClaim(null);
+    showMessage('Claim updated successfully!', 'success');
+  } catch (err) {
+    console.error("Error updating claim:", err);
+    showMessage('Failed to update claim.', 'error');
+  }
+};
+
 
   const handleDelete = async (id) => {
     try {
       await api.delete(`/claim/delete-claim/${id}`);
       setClaims((prev) => prev.filter((claim) => claim._id !== id));
       setShowDeleteConfirm(null);
-      alert('Claim deleted successfully!');
+      showMessage('Claim deleted successfully!', 'success');
     } catch (err) {
       console.error("Error deleting claim:", err);
-      alert('Failed to delete claim.');
+      showMessage('Failed to delete claim.', 'error');
     }
   };
 
@@ -130,6 +154,12 @@ const MyClaims = () => {
           src="https://video.wixstatic.com/video/f1c650_988626917c6549d6bdc9ae641ad3c444/720p/mp4/file.mp4"
         />
       </div>
+
+      {message && (
+        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${messageType === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`}>
+          {message}
+        </div>
+      )}
 
       <div className="h-screen w-full flex items-center p-4 pl-6.5">
         <SideBar />
@@ -165,16 +195,16 @@ const MyClaims = () => {
                       </Link>
                       <div className="flex flex-row items-center space-x-2">
                         <button
+                          className={`flex flex-row p-2 rounded-full hover:cursor-pointer transition-all ease-in-out delay-50 hover:scale-105 ${userVotes[claim._id] === 'upvote' ? 'bg-red-900' : 'bg-red-700 hover:bg-red-600'}`}
                           onClick={() => handleUpvote(claim._id)}
-                          className="bg-red-700 flex flex-row p-2 rounded-full hover:bg-red-600 hover:scale-110 hover:cursor-pointer transition duration-300 ease-in-out active:scale-90"
                         >
-                          <img src={upvote} alt="Upvote" className="h-4 w-4 mr-1 mt-0.5" /> {claim.upvotes || 0}
+                          <img src={upvote} alt="Upvote" className="h-4 w-4 mr-1 mt-0.5" /> {claim.upvote || 0}
                         </button>
                         <button
+                          className={`p-2 flex flex-row rounded-full hover:cursor-pointer transition-all ease-in-out delay-50 hover:scale-105 ${userVotes[claim._id] === 'downvote' ? 'bg-gray-900' : 'bg-white hover:bg-gray-300 text-black'}`}
                           onClick={() => handleDownvote(claim._id)}
-                          className="bg-white hover:scale-110 hover:cursor-pointer transition duration-300 ease-in-out active:scale-90 p-2 flex flex-row text-black rounded-full hover:bg-gray-200"
                         >
-                          <img src={downvote} alt="Downvote" className="h-4 w-4 mr-1 mt-0.5" /> {claim.downvotes || 0}
+                          <img src={downvote} alt="Downvote" className="h-4 w-4 mr-1 mt-0.5" /> {claim.downvote || 0}
                         </button>
                         <button
                           onClick={() => handleEdit(claim)}
@@ -199,11 +229,22 @@ const MyClaims = () => {
 
                     {claim.image && (
                       <div className="w-full flex justify-center items-center mt-2">
-                        <img
-                          src={`${import.meta.env.VITE_BASE_URL}${claim.image}`}
-                          alt="Claim Media"
-                          className="max-h-64 rounded-xl border-2 border-white shadow-lg"
-                        />
+                        {claim.image.endsWith('.mp4') ||
+                        claim.image.endsWith('.mp3') ||
+                        claim.image.endsWith('.webm') ||
+                        claim.image.endsWith('.ogg')? (
+                          <video
+                            src={`${import.meta.env.VITE_BASE_URL}${claim.image}`}
+                            controls
+                            className="max-h-64 rounded-xl border-2 border-white shadow-lg"
+                          />
+                        ) : (
+                          <img
+                            src={`${import.meta.env.VITE_BASE_URL}${claim.image}`}
+                            alt="Claim Media"
+                            className="max-h-64 rounded-xl border-2 border-white shadow-lg"
+                          />
+                        )}
                       </div>
                     )}
 
@@ -218,7 +259,7 @@ const MyClaims = () => {
 
                     {hydrated[claim._id] && (
                       <div ref={commentsRef} className="-mt-2 z-5">
-                        <Comments claimId={claim._id} onNoComments={() => setShowNoCommentsPopup(true)} onCommentAdded={fetchClaims} />
+                        <Comments claimId={claim._id} onNoComments={() => setShowNoCommentsPopup(true)} onCommentAdded={handleCommentAdded} />
                       </div>
                     )}
                   </div>

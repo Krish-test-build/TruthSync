@@ -3,9 +3,10 @@ const { validationResult } = require('express-validator');
 const { defaultImage } = require('../config/Default.config');
 const moderationServices = require('../services/Moderation.Services');
 const ClaimModel = require('../models/Claim.Model');
-const CommentModel = require('../models/Comment.Model'); // ✅ fixed
+const CommentModel = require('../models/Comment.Model'); 
 const NotificationModel = require('../models/Notification.Model');
 const UserModel = require('../models/SignUp.Model');
+const VoteModel = require('../models/Vote.Model');
 
 module.exports.createClaim = async (req, res) => {
   const errors = validationResult(req);
@@ -96,9 +97,16 @@ module.exports.deleteClaim = async (req, res) => {
   }
 };
 
+
 module.exports.getAllClaims = async (req, res) => {
   try {
     const claims = await ClaimModel.find().sort({ createdAt: -1 });
+    for (let claim of claims) {
+      const vote = await VoteModel.findOne({ user: req.user._id, claim: claim._id });
+      claim.userVote = vote ? vote.voteType : null;
+      const user = await UserModel.findById(req.user._id);
+      claim.bookmarked = user.bookmarks.includes(claim._id);
+    }
     res.status(200).json(claims);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -118,6 +126,13 @@ module.exports.sortClaims = async (req, res) => {
       claims = await ClaimModel.find();
     }
 
+    for (let claim of claims) {
+      const vote = await VoteModel.findOne({ user: req.user._id, claim: claim._id });
+      claim.userVote = vote ? vote.voteType : null;
+      const user = await UserModel.findById(req.user._id);
+      claim.bookmarked = user.bookmarks.includes(claim._id);
+    }
+
     res.status(200).json(claims);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -127,12 +142,19 @@ module.exports.sortClaims = async (req, res) => {
 module.exports.filterClaims = async (req, res) => {
   const { category } = req.params;
   try {
-    const claim = await ClaimModel.find({ category }).populate('user');
-    res.status(200).json({ claim });
+    const claims = await ClaimModel.find({ category }).populate('user');
+    for (let claim of claims) {
+      const vote = await VoteModel.findOne({ user: req.user._id, claim: claim._id });
+      claim.userVote = vote ? vote.voteType : null;
+      const user = await UserModel.findById(req.user._id);
+      claim.bookmarked = user.bookmarks.includes(claim._id);
+    }
+    res.status(200).json({ claim: claims });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 module.exports.commentClaim = async (req, res) => {
   const errors = validationResult(req);

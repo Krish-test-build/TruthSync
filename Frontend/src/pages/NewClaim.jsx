@@ -9,8 +9,33 @@ const NewClaim = () => {
   const [selectedFile, setSelectedFile] = useState(null)
   const [isAnonymous, setIsAnonymous] = useState(false)
   const [category, setCategory] = useState('')
+  const [message, setMessage] = useState('')
+  const [messageType, setMessageType] = useState('') // 'success' or 'error'
 
   const navigate = useNavigate()
+
+  const showMessage = (msg, type) => {
+    setMessage(msg)
+    setMessageType(type)
+    setTimeout(() => setMessage(''), 3000)
+  }
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/webm', 'video/ogg']
+      if (!allowedTypes.includes(file.type)) {
+        showMessage('Invalid file type. Only images and videos (MP4, WebM, OGG) are allowed.', 'error')
+        return
+      }
+      const maxSize = 50 * 1024 * 1024 // 50MB
+      if (file.size > maxSize) {
+        showMessage('File size too large. Maximum allowed is 50MB.', 'error')
+        return
+      }
+      setSelectedFile(file)
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -21,21 +46,31 @@ const NewClaim = () => {
     formData.append('category', category)
     formData.append('isAnonymous', isAnonymous)
     if (selectedFile) {
-      formData.append('image', selectedFile) 
+      formData.append('image', selectedFile)
     }
 
-    setTitle('')
-    setDescription('')
-    setSelectedFile(null)
-    setIsAnonymous(false)
-    setCategory('')
-
-    await axios.post(`${import.meta.env.VITE_BASE_URL}/claim/new-claim`, formData, {
-      withCredentials: true,
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-    alert('Claim submitted successfully!')
-    navigate('/home')
+    try {
+      await axios.post(`${import.meta.env.VITE_BASE_URL}/claim/new-claim`, formData, {
+        withCredentials: true,
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      showMessage('Claim submitted successfully!', 'success')
+      setTitle('')
+      setDescription('')
+      setSelectedFile(null)
+      setIsAnonymous(false)
+      setCategory('')
+      navigate('/home')
+    } catch (err) {
+      console.error('Error submitting claim:', err.response?.data || err.message)
+      const errorMsg = err.response?.data?.message || 'Failed to submit claim. Please try again.'
+      showMessage(errorMsg, 'error')
+      setTitle('')
+      setDescription('')
+      setSelectedFile(null)
+      setIsAnonymous(false)
+      setCategory('')
+    }
   }
 
   const categories = [
@@ -60,6 +95,12 @@ const NewClaim = () => {
           src="https://video.wixstatic.com/video/f1c650_988626917c6549d6bdc9ae641ad3c444/720p/mp4/file.mp4"
         />
       </div>
+
+      {message && (
+        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${messageType === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`}>
+          {message}
+        </div>
+      )}
 
       <div className="h-screen w-full flex items-center p-4 -ml-0.5">
         <SideBar />
@@ -116,7 +157,7 @@ const NewClaim = () => {
                 </span>
                 <input
                   type="file"
-                  onChange={(e) => setSelectedFile(e.target.files[0])}
+                  onChange={handleFileChange}
                   className="border-2 border-gray-300 text-white hover:cursor-pointer rounded-xl p-2 hover:scale-105 duration-200 ease-in-out file:bg-purple-600 file:cursor-pointer file:text-white file:rounded file:px-4 file:py-1"
                   accept="image/*,video/*"
                 />

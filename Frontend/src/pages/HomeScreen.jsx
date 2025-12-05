@@ -12,10 +12,13 @@ const HomeScreen = () => {
   const scrollRef = useRef(null)
   const profileRef = useRef(null)
   const [claims, setClaims] = useState([])
+  const [userVotes, setUserVotes] = useState({}) // { claimId: 'upvote' | 'downvote' | null }
   const [category, setCategory] = useState('')
   const [search, setSearch] = useState('')
   const [sortTop, setSortTop] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [message, setMessage] = useState('')
+  const [messageType, setMessageType] = useState('') // 'success' or 'error'
 
   useEffect(() => {
     if (!scrollRef.current) return
@@ -30,7 +33,14 @@ const HomeScreen = () => {
       let url = `/claim/sort?sort=${sortTop ? 'TopClaims' : 'MostRecent'}`
       if (category) url = `/claim/filterby/${category}`
       const res = await api.get(url, { withCredentials: true })
-      setClaims(res.data.claim || res.data)
+      const claimsData = res.data.claim || res.data
+      setClaims(claimsData)
+      // Set user votes and bookmarks from response
+      const votes = {}
+      claimsData.forEach(claim => {
+        votes[claim._id] = claim.userVote || null
+      })
+      setUserVotes(votes)
     } catch (err) {
       console.error("Error fetching claims:", err)
     }
@@ -48,12 +58,62 @@ const HomeScreen = () => {
   const handleTopClaimsClick = () => { setSortTop(true); setCategory('') }
   const homeClick = () => { setSortTop(false); setCategory('') }
 
-  const handleUpvote = async (id) => { await api.post(`/claim/${id}/upvote`, {}); setSortTop(sortTop) }
-  const handleDownvote = async (id) => { await api.post(`/claim/${id}/downvote`, {}); setSortTop(sortTop) }
+  const showMessage = (msg, type) => {
+    setMessage(msg)
+    setMessageType(type)
+    setTimeout(() => setMessage(''), 3000)
+  }
+
+  const handleVote = async (id, voteType) => {
+    try {
+      const res = await api.post(`/claim/${id}/vote`, { vote: voteType })
+      console.log('vote response', res.data);
+
+      const { message, upvote, downvote } = res.data
+      setClaims((prev) =>
+        prev.map((claim) =>
+          claim._id === id ? { ...claim, upvote, downvote } : claim
+        )
+      )
+      if (message === 'Vote removed') {
+        setUserVotes((prev) => ({ ...prev, [id]: null }))
+        showMessage('Vote removed!', 'success')
+      } else {
+        setUserVotes((prev) => ({ ...prev, [id]: voteType }))
+        showMessage(`Claim ${voteType}d!`, 'success')
+      }
+    } catch (err) {
+      console.error("Error voting:", err)
+      showMessage('Failed to update vote.', 'error')
+    }
+  }
+
+  const handleUpvote = (id) => handleVote(id, 'upvote')
+  const handleDownvote = (id) => handleVote(id, 'downvote')
+
   const handleBookmark = async (id, bookmarked) => {
-    if (bookmarked) await api.delete(`/claim/${id}/bookmark`)
-    else await api.post(`/claim/${id}/bookmark`, {})
-    setSortTop(sortTop)
+    try {
+      if (bookmarked) {
+        await api.delete(`/claim/${id}/bookmark`)
+        setClaims((prev) =>
+          prev.map((claim) =>
+            claim._id === id ? { ...claim, bookmarked: false } : claim
+          )
+        )
+        showMessage('Bookmark removed!', 'success')
+      } else {
+        await api.post(`/claim/${id}/bookmark`, {})
+        setClaims((prev) =>
+          prev.map((claim) =>
+            claim._id === id ? { ...claim, bookmarked: true } : claim
+          )
+        )
+        showMessage('Claim bookmarked!', 'success')
+      }
+    } catch (err) {
+      console.error("Error bookmarking:", err)
+      showMessage('Claim already bookmarked', 'error')
+    }
   }
 
   const filteredClaims = claims.filter(c =>
@@ -63,8 +123,8 @@ const HomeScreen = () => {
 
   const sortedClaims = sortTop
     ? [...filteredClaims].sort((a, b) =>
-        ((b.upvotes?.length || 0) + (b.downvotes?.length || 0)) -
-        ((a.upvotes?.length || 0) + (a.downvotes?.length || 0))
+        ((b.upvote || 0) + (b.downvote || 0)) -
+        ((a.upvote || 0) + (a.downvote || 0))
       )
     : filteredClaims
 
@@ -73,6 +133,12 @@ const HomeScreen = () => {
       <div className="fixed top-0 left-0 w-full h-screen -z-10">
         <video autoPlay loop muted className="w-full h-full object-cover" src="https://video.wixstatic.com/video/f1c650_988626917c6549d6bdc9ae641ad3c444/720p/mp4/file.mp4" />
       </div>
+
+      {message && (
+        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${messageType === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`}>
+          {message}
+        </div>
+      )}
 
       <div className="h-screen w-full flex justify-between items-center p-4">
         <SideBar onCategoryClick={handleCategoryClick} onTopClaimsClick={handleTopClaimsClick} onHomeClick={homeClick} />
@@ -118,15 +184,21 @@ const HomeScreen = () => {
                 </div>
 
                 <div className="flex flex-row items-center space-x-2">
-                  <button className="bg-red-700 flex flex-row p-2 rounded-full hover:bg-red-600 hover:cursor-pointer" onClick={() => handleUpvote(claim._id)}>
-                    <img src="./src/assets/upvote.svg" alt="Upvote" className="h-4 w-4 mr-1 mt-0.5" /> {claim.upvotes?.length || 0}
+                  <button
+                    className={`flex flex-row p-2 rounded-full hover:cursor-pointer transition-all ease-in-out delay-50 hover:scale-105 ${userVotes[claim._id] === 'upvote' ? 'bg-red-600' : 'bg-red-700 hover:bg-red-600'}`}
+                    onClick={() => handleUpvote(claim._id)}
+                  >
+                    <img src="./src/assets/upvote.svg" alt="Upvote" className="h-4 w-4 mr-1 mt-0.5" /> {claim.upvote || 0}
                   </button>
 
-                  <button className="bg-white p-2 flex flex-row text-black rounded-full hover:bg-gray-300 hover:cursor-pointer" onClick={() => handleDownvote(claim._id)}>
-                    <img src="./src/assets/downvote.svg" alt="Downvote" className="h-4 w-4 mr-1 mt-0.5" /> {claim.downvotes?.length || 0}
+                  <button
+                    className={`p-2 flex flex-row rounded-full hover:cursor-pointer transition-all ease-in-out delay-50 hover:scale-105 ${userVotes[claim._id] === 'downvote' ? 'bg-gray-300 text-black' : 'bg-white hover:bg-gray-300 text-black'}`}
+                    onClick={() => handleDownvote(claim._id)}
+                  >
+                    <img src="./src/assets/downvote.svg" alt="Downvote" className="h-4 w-4 mr-1 mt-0.5" /> {claim.downvote || 0}
                   </button>
 
-                  <button className={`ml-2 p-2 rounded-full ${claim.bookmarked ? 'bg-yellow-400' : 'bg-gray-200'} hover:scale-110`} onClick={() => handleBookmark(claim._id, claim.bookmarked)}>
+                  <button className={`ml-2 p-2 rounded-full cursor-pointer hover:scale-110 transition-all ease-in-out delay-50  ${claim.bookmarked ? 'bg-yellow-400' : 'bg-gray-200'}`} onClick={() => handleBookmark(claim._id, claim.bookmarked)}>
                     <img src="./src/assets/bookmark.png" alt="Bookmark" className="h-4 w-4" />
                   </button>
 

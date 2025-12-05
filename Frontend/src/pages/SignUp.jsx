@@ -4,7 +4,6 @@ import axios from 'axios'
 
 const SignUp = () => {
   const [user, setUser] = useState(null)
-
   const navigate = useNavigate()
   const [form, setForm] = useState({
     firstName: '',
@@ -16,6 +15,14 @@ const SignUp = () => {
   })
   const [imagePreview, setImagePreview] = useState(null)
   const fileInputRef = useRef(null)
+  const [message, setMessage] = useState('')
+  const [messageType, setMessageType] = useState('') // 'success' or 'error'
+
+  const showMessage = (msg, type) => {
+    setMessage(msg)
+    setMessageType(type)
+    setTimeout(() => setMessage(''), 3000) // Hide after 3 seconds
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -42,14 +49,13 @@ const SignUp = () => {
   const handleDragOver = (e) => {
     e.preventDefault()
   }
- 
 
   const submitHandler = async (e) => {
     e.preventDefault()
-     if (!form.firstName || !form.lastName || !form.username || !form.email || !form.password) {
-      alert('Please fill in all fields')
+    if (!form.firstName || !form.lastName || !form.username || !form.email || !form.password) {
+      showMessage('Please fill in all fields', 'error')
       return
-    }   
+    }
     const newUser = new FormData();
     newUser.append('firstName', form.firstName)
     newUser.append('lastName', form.lastName)
@@ -58,17 +64,23 @@ const SignUp = () => {
     newUser.append('password', form.password)
     if (form.image) {
       newUser.append('image', form.image)
-
     }
-    
-    
-      const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/signup`,newUser)
-      if(response.status==201){
-          const data=response.data
-          setUser(data.user)
-          localStorage.setItem('token',data.token)
-          alert('User created successfully')
+
+    try {
+      const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/signup`, newUser)
+      if (response.status === 201) {
+        const data = response.data
+        setUser(data.user)
+        localStorage.setItem('token', data.token)
+        showMessage('User created successfully', 'success')
+        navigate('/home') // Navigate after success
       }
+    } catch (err) {
+      console.error('Signup error:', err.response?.data || err.message)
+      const errorMsg = err.response?.data?.message || 'User Already Exists'
+      showMessage(errorMsg, 'error')
+    }
+
     setForm({
       firstName: '',
       lastName: '',
@@ -78,7 +90,6 @@ const SignUp = () => {
       image: null,
     })
     setImagePreview(null)
-    
   }
 
   return (
@@ -94,6 +105,13 @@ const SignUp = () => {
           ></video>
         </div>
       </div>
+
+      {message && (
+        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${messageType === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`}>
+          {message}
+        </div>
+      )}
+
       <Link to={'/'}>
         <img className='fixed top-5 left-5 h-30 w-32 hover:scale-120 transition duration-300 ease-in-out hover:cursor-pointer' src="./src/assets/logo1.png" alt="" />
       </Link>

@@ -7,21 +7,35 @@ module.exports.voteClaim = async (claimId, userId, voteType) => {
   }
 
   const existingVote = await VoteModel.findOne({ user: userId, claim: claimId });
+  const claim = await ClaimModel.findById(claimId);
+  claim.upvote = Number(claim.upvote ?? 0);
+  claim.downvote = Number(claim.downvote ?? 0);
+
+
+
 
   if (existingVote) {
     if (existingVote.voteType === voteType) {
       await VoteModel.findByIdAndDelete(existingVote._id);
-      return { message: "Vote removed" };
-    } 
-
-    existingVote.voteType = voteType;
-    await existingVote.save();
-    return { message: "Vote updated", vote: existingVote };
+      if (voteType === 'upvote'  && claim.upvote!==0) claim.upvote--;
+      else if ( claim.downvote!==0) claim.downvote--;
+      await claim.save();
+      return { message: "Vote removed", upvote: claim.upvote, downvote: claim.downvote };
+    } else {
+      if (existingVote.voteType === 'upvote' && claim.upvote!==0) claim.upvote--;
+      else if ( claim.downvote!==0) claim.downvote--;
+      if (voteType === 'upvote') claim.upvote++;
+      else claim.downvote++;
+      existingVote.voteType = voteType;
+      await existingVote.save();
+      await claim.save();
+      return { message: "Vote updated", upvote: claim.upvote, downvote: claim.downvote };
+    }
   }
 
   const newVote = await VoteModel.create({ user: userId, claim: claimId, voteType });
-  return { message: "Vote added", vote: newVote };
+  if (voteType === 'upvote') claim.upvote++;
+  else claim.downvote++;
+  await claim.save();
+  return { message: "Vote added", upvote: claim.upvote, downvote: claim.downvote };
 };
-
-
-  

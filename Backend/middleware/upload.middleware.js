@@ -12,7 +12,7 @@ const storage = multer.diskStorage({
 })
 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|webp/
+  const allowedTypes = /jpeg|jpg|png|webp|mp4|mp3|webm|ogg/
   const isAllowed = allowedTypes.test(file.mimetype.toLowerCase())
   if (isAllowed) cb(null, true)
   else cb(new Error('Invalid file type'))
@@ -21,7 +21,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 50 * 1024 * 1024 }, 
 })
 
 module.exports = upload

@@ -49,10 +49,10 @@ const Comments = ({ claimId, onNoComments }) => {
     setLoading(true)
     try {
       const res = await api.post(`/claim/${claimId}/comment`, { comments: newComment })
-      console.log('POST response:', res.data) // Debug: Check if comment is returned
+      console.log('POST response:', res.data) 
       setComments((prev) => {
         const updated = [...prev, res.data.comment]
-        console.log('Updated comments:', updated) // Debug: Check state update
+        console.log('Updated comments:', updated) 
         return updated
       })
       setNewComment('')

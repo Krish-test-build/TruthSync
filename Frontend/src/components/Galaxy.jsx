@@ -51,7 +51,7 @@ useEffect(() => {
       <ambientLight intensity={1} />
       <directionalLight position={[5, 5, 5]} intensity={2} />
 
-      <group ref={centerGroupRef} position={[0, -2, 10]}>
+      <group ref={centerGroupRef} position={[0, 0, 10]}>
         <primitive
           ref={modelRef}
           object={gltf.scene}
