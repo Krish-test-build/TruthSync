@@ -1,7 +1,15 @@
-    uploads
-    Backend/firebase-service-account.json
-    .env
-    node_modules
-    firebase-service-account.json
-    uploads/
-    Backend/uploads/
+# environment files
+.env
+**/.env
+
+# dependencies
+node_modules/
+**/node_modules/
+
+# uploads
+uploads/
+Backend/uploads/
+
+# secrets
+firebase-service-account.json
+Backend/firebase-service-account.json
