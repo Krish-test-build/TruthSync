@@ -23,3 +23,5 @@ Frontend/public/galaxy1.glb
 *.njsproj
 *.sln
 *.sw?
+src/Firebase.js
+Firebase.js

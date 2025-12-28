@@ -14,7 +14,7 @@ const categories = [
 
 const Categories = ({ onCategoryClick, setCategoryOpen }) => {
   return (
-    <div className='h-auto w-48 rounded-2xl border-4 ml-1 border-purple-800 bg-white absolute left-44 top-1/2 z-20 p-3 flex flex-col font-[spaceMono-Bold] items-start justify-center text-md animate-fade-in'>
+    <div className='h-auto w-48 rounded-2xl border-4 ml-1 border-purple-800 bg-white text-black fixed left-46 top-1/2 z-20 p-3 flex flex-col font-[spaceMono-Bold] items-start justify-center text-md animate-fade-in'>
       {categories.map((cat, idx) => (
         <button
           key={idx}

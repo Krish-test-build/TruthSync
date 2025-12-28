@@ -10,7 +10,7 @@ const NewClaim = () => {
   const [isAnonymous, setIsAnonymous] = useState(false)
   const [category, setCategory] = useState('')
   const [message, setMessage] = useState('')
-  const [messageType, setMessageType] = useState('') // 'success' or 'error'
+  const [messageType, setMessageType] = useState('')
 
   const navigate = useNavigate()
 
@@ -22,19 +22,23 @@ const NewClaim = () => {
 
   const handleFileChange = (e) => {
     const file = e.target.files[0]
-    if (file) {
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/webm', 'video/ogg']
-      if (!allowedTypes.includes(file.type)) {
-        showMessage('Invalid file type. Only images and videos (MP4, WebM, OGG) are allowed.', 'error')
-        return
-      }
-      const maxSize = 50 * 1024 * 1024 // 50MB
-      if (file.size > maxSize) {
-        showMessage('File size too large. Maximum allowed is 50MB.', 'error')
-        return
-      }
-      setSelectedFile(file)
+    if (!file) return
+
+    const allowed = [
+      'image/jpeg', 'image/png', 'image/gif',
+      'video/mp4', 'video/webm', 'video/ogg'
+    ]
+    if (!allowed.includes(file.type)) {
+      showMessage('Invalid file type.', 'error')
+      return
     }
+
+    if (file.size > 50 * 1024 * 1024) {
+      showMessage('File too large (50MB max).', 'error')
+      return
+    }
+
+    setSelectedFile(file)
   }
 
   const handleSubmit = async (e) => {
@@ -45,48 +49,30 @@ const NewClaim = () => {
     formData.append('description', description)
     formData.append('category', category)
     formData.append('isAnonymous', isAnonymous)
-    if (selectedFile) {
-      formData.append('image', selectedFile)
-    }
+    if (selectedFile) formData.append('image', selectedFile)
 
     try {
-      await axios.post(`${import.meta.env.VITE_BASE_URL}/claim/new-claim`, formData, {
-        withCredentials: true,
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
+      await axios.post(
+        `${import.meta.env.VITE_BASE_URL}/claim/new-claim`,
+        formData,
+        { withCredentials: true }
+      )
       showMessage('Claim submitted successfully!', 'success')
-      setTitle('')
-      setDescription('')
-      setSelectedFile(null)
-      setIsAnonymous(false)
-      setCategory('')
       navigate('/home')
-    } catch (err) {
-      console.error('Error submitting claim:', err.response?.data || err.message)
-      const errorMsg = err.response?.data?.message || 'Failed to submit claim. Please try again.'
-      showMessage(errorMsg, 'error')
-      setTitle('')
-      setDescription('')
-      setSelectedFile(null)
-      setIsAnonymous(false)
-      setCategory('')
+    } catch {
+      showMessage('Failed to submit claim.', 'error')
     }
   }
 
   const categories = [
-    'Politics',
-    'Health',
-    'Education',
-    'Entertainment',
-    'Science and Tech',
-    'Finance',
-    'Sports',
-    'Miscellaneous'
+    'Politics','Health','Education','Entertainment',
+    'Science and Tech','Finance','Sports','Miscellaneous'
   ]
 
   return (
     <>
-      <div className="fixed top-0 left-0 w-full h-screen -z-10">
+      {/* Background (same as HomeScreen) */}
+      <div className="fixed inset-0 -z-10">
         <video
           autoPlay
           loop
@@ -94,38 +80,74 @@ const NewClaim = () => {
           className="w-full h-full object-cover"
           src="https://video.wixstatic.com/video/f1c650_988626917c6549d6bdc9ae641ad3c444/720p/mp4/file.mp4"
         />
+        <div className="absolute inset-0 bg-black/45" />
       </div>
 
       {message && (
-        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${messageType === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`}>
+        <div className={`fixed top-4 right-4 px-4 py-3 rounded-xl z-50 text-white
+          ${messageType === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
           {message}
         </div>
       )}
 
-      <div className="h-screen w-full flex items-center p-4 -ml-0.5">
+      <div className="h-screen w-full flex items-center p-4">
         <SideBar />
 
-        <div className="w-3/4 h-full flex border-4 border-white text-white flex-col justify-between px-8  rounded-3xl shadow-lg shadow-purple-800 ml-20 bg-transparent">
+        <div
+          className="
+            w-3/4 h-full flex flex-col
+            border-3 border-purple-500/70
+            text-white px-8
+            rounded-xl
+            shadow-lg shadow-purple-700/40
+            ml-20 bg-transparent
+          "
+        >
+          {/* Title */}
           <div
-            className="text-[55px] tracking-wide ml-1 font-bold flex items-start justify-start font-[monaco]"
-            style={{ textShadow: '3px 3px 2.5px #51E5F8' }}
+            className="text-[55px] tracking-wide  font-[monaco]"
+            style={{ textShadow: '2px 2px 3px rgba(123,108,255,0.6)' }}
           >
             New Claim
           </div>
 
-          <div className="absolute top-25 rounded-3xl h-125.5 w-[68%] bg-gradient-to-b  from-gray-400 to-black opacity-30 z-0"></div>
+          {/* Soft inner overlay */}
+          <div
+            className="
+              absolute top-25 rounded-xl
+              h-125.5 w-[68%]
+              bg-gradient-to-b from-gray-500 to-black
+              opacity-20 z-0
+            "
+          />
 
-          <div className="w-full h-[95%] tracking-wide rounded-3xl border-5 border-cyan-300 z-2 flex items-center justify-center text-black shadow-md shadow-cyan-500 -mt-1 mb-2">
+          {/* Form container */}
+          <div
+            className="
+              w-full h-[85%]
+              rounded-xl border-3 border-gray-400
+              bg-[#141823]
+              z-10 flex items-center justify-center
+              shadow-md shadow-purple-600/40
+              -mt-2
+            "
+          >
             <form
               onSubmit={handleSubmit}
-              className="w-[90%] flex flex-col gap-5 font-[spaceMono] text-lg font-semibold"
+              className="w-[90%] flex flex-col gap-5 font-[spaceMono] text-lg opacity-90"
             >
               <input
                 type="text"
                 placeholder="Claim Title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="border-3 text-white border-gray-300 caret-white placeholder:text-white rounded-xl p-2 outline-none focus:border-cyan-500 transition hover:cursor-pointer hover:scale-105 duration-200 ease-in-out focus:scale-105"
+                className="
+                  bg-transparent text-white placeholder:text-gray-300
+                  border-2 border-gray-400
+                  rounded-lg p-2 outline-none
+                  focus:border-purple-500
+                  transition hover:scale-103 hover:cursor-pointer
+                "
                 required
               />
 
@@ -133,7 +155,13 @@ const NewClaim = () => {
                 placeholder="Description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="border-3 text-white border-gray-300 caret-white placeholder:text-white rounded-xl p-2 h-32 resize-none outline-none focus:border-cyan-500 transition hover:cursor-pointer hover:scale-105 duration-200 ease-in-out focus:scale-105"
+                className="
+                  bg-transparent text-white placeholder:text-gray-300
+                  border-2 border-gray-400
+                  rounded-lg p-2 h-32 resize-none
+                  outline-none focus:border-purple-500
+                  transition hover:scale-103 hover:cursor-pointer
+                "
                 required
               />
 
@@ -141,41 +169,52 @@ const NewClaim = () => {
                 required
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="border-2 bg-transparent  text-white border-gray-300 rounded-xl p-2 outline-none hover:cursor-pointer hover:scale-105 focus:border-cyan-500 transition duration-200 ease-in-out"
+                className="
+                  bg-transparent text-white
+                  border-2 border-gray-400
+                  rounded-lg p-2 outline-none
+                  transition hover:scale-103 hover:cursor-pointer
+                "
               >
                 <option value="" disabled>Select Category</option>
                 {categories.map((cat, i) => (
-                  <option key={i} value={cat} className="text-black accent-purple-600 hover:bg-purple-600 hover:cursor-pointer ">
+                  <option key={i} value={cat} className="text-black">
                     {cat}
                   </option>
                 ))}
               </select>
 
-              <label className="flex flex-col gap-2">
-                <span className="text-sm font-semibold text-white">
-                  Upload Image/Video (optional)
-                </span>
-                <input
-                  type="file"
-                  onChange={handleFileChange}
-                  className="border-2 border-gray-300 text-white hover:cursor-pointer rounded-xl p-2 hover:scale-105 duration-200 ease-in-out file:bg-purple-600 file:cursor-pointer file:text-white file:rounded file:px-4 file:py-1"
-                  accept="image/*,video/*"
-                />
-              </label>
+              <input
+                type="file"
+                onChange={handleFileChange}
+                accept="image/*,video/*"
+                className="
+                  border-2 border-gray-400
+                  rounded-lg p-2
+                  file:bg-purple-600 file:text-white
+                  file:rounded file:px-4 file:py-1 file:mr-3
+                  transition hover:scale-103 hover:cursor-pointer
+                "
+              />
 
-              <label className="flex w-75 items-center gap-2 text-white text-sm hover:cursor-pointer hover:scale-105 duration-200 ease-in-out">
+              <label className="flex items-center gap-2 text-white text-sm hover:scale-103 hover:cursor-pointer transition">
                 <input
                   type="checkbox"
                   checked={isAnonymous}
                   onChange={(e) => setIsAnonymous(e.target.checked)}
-                  className="accent-purple-600 w-5 h-5 hover:cursor-pointer hover:scale-105 duration-200 ease-in-out"
+                  className="accent-purple-600 w-5 h-5 hover:cursor-pointer"
                 />
-                Submit anonymously (optional)
+                Submit anonymously
               </label>
 
               <button
                 type="submit"
-                className=" bg-purple-600 text-white py-2 rounded-xl hover:cursor-pointer font-bold text-lg hover:bg-purple-700 transition active:scale-95 hover:scale-105 duration-200 ease-in-out focus:scale-105"
+                className="
+                  bg-purple-600 text-white py-2
+                  rounded-lg font-bold
+                  hover:bg-purple-700
+                  hover:scale-103 transition hover:cursor-pointer
+                "
               >
                 Submit Claim
               </button>

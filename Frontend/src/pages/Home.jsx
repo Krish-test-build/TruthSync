@@ -5,6 +5,7 @@ import Galaxy from '../components/Galaxy';
 import { Link } from 'react-router-dom';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 
+
 const Home = () => {
   const [loaded, setLoaded] = useState(false);
   const [modelReady, setModelReady] = useState(false);

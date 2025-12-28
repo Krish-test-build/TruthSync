@@ -1,113 +1,193 @@
-import React, { useState, useEffect, useRef } from 'react'
-import api from '../api/axiosConfig'
-import Lenis from 'lenis'
+import React, { useState, useEffect, useRef } from "react";
+import api from "../api/axiosConfig";
+import Lenis from "lenis";
 
-const Comments = ({ claimId, onNoComments }) => {
-  const [comments, setComments] = useState([])
-  const [newComment, setNewComment] = useState('')
-  const [loading, setLoading] = useState(false)
-  const scrollRef = useRef()
+const Comments = ({ claimId, onNoComments, onCommentAdded }) => {
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const scrollRef = useRef(null);
+
+  /* -------------------- FETCH COMMENTS -------------------- */
 
   useEffect(() => {
     const fetchComments = async () => {
       try {
-        const res = await api.get(`/claim/${claimId}/comments`)
-        setComments(res.data.comments || [])
-        if ((res.data.comments || []).length === 0 && onNoComments) {
-          onNoComments()
+        const res = await api.get(`/claim/${claimId}/comments`);
+        const list = res.data.comments || [];
+        setComments(list);
+
+        if (list.length === 0 && onNoComments) {
+          onNoComments();
         }
       } catch (err) {
-        console.error('Error fetching comments:', err)
+        console.error("Error fetching comments:", err);
       }
-    }
-    if (claimId) fetchComments()
-  }, [claimId, onNoComments])
+    };
+
+    if (claimId) fetchComments();
+  }, [claimId, onNoComments]);
+
+  /* -------------------- SMOOTH SCROLL -------------------- */
 
   useEffect(() => {
-    if (!scrollRef.current) return
+    if (!scrollRef.current) return;
 
     const lenis = new Lenis({
       wrapper: scrollRef.current,
       content: scrollRef.current,
       smooth: true,
-      duration: 2,
-    })
+      duration: 1.1,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+    });
 
-    function raf(time) {
-      lenis.raf(time)
-      requestAnimationFrame(raf)
-    }
-    requestAnimationFrame(raf)
+    const raf = (time) => {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    };
+    requestAnimationFrame(raf);
 
-    return () => {
-      lenis.destroy()
-    }
-  }, [])
+    return () => lenis.destroy();
+  }, []);
+
+  /* -------------------- ADD COMMENT -------------------- */
 
   const handleAddComment = async () => {
-    if (!newComment.trim()) return
-    setLoading(true)
+    if (!newComment.trim()) return;
+
+    setLoading(true);
     try {
-      const res = await api.post(`/claim/${claimId}/comment`, { comments: newComment })
-      console.log('POST response:', res.data) 
-      setComments((prev) => {
-        const updated = [...prev, res.data.comment]
-        console.log('Updated comments:', updated) 
-        return updated
-      })
-      setNewComment('')
+      const res = await api.post(`/claim/${claimId}/comment`, {
+        comments: newComment,
+      });
+
+      setComments((prev) => [...prev, res.data.comment]);
+      setNewComment("");
+
+      if (onCommentAdded) onCommentAdded(claimId);
     } catch (err) {
-      console.error('Error posting comment:', err)
+      console.error("Error posting comment:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+
+  /* -------------------- UI -------------------- */
 
   return (
-    <div className="w-full h-full flex flex-col p-4 rounded-3xl border-4 border-white bg-black bg-opacity-40 shadow-xl font-[spaceMono] text-white">
-      <h2 className="text-3xl font-bold font-[monaco] " style={{ textShadow: '2px 2px 2px #51E5F8' }}>
+    <div
+      className="
+        w-full
+        mt-2
+        px-4
+        py-1
+        rounded-xl
+        border-2 border-[#2A2F45]
+        bg-[#ffffff] brightness-80
+        text-sm
+        font-[spaceMono]
+        text-black
+      "
+    >
+      {/* Header */}
+      <div
+        className="text-[34px] font-[monaco] tracking-wide"
+      >
         Comments
-      </h2>
+      </div>
 
-      <div ref={scrollRef} className="flex flex-col gap-3 text-black max-h-[70vh] pr-3 overflow-y-auto scrollbar-visible">
+      {/* Comment List */}
+      <div
+        ref={scrollRef}
+        className="
+          max-h-[50vh]
+          flex flex-col gap-3
+          pr-2
+          overflow-y-auto
+          scrollbar-hide
+        "
+      >
         {comments.length > 0 ? (
           comments.map((comment) => (
             <div
               key={comment._id}
-              className="bg-white bg-opacity-20 rounded-2xl px-4 py-2 border-2 border-cyan-300 shadow-md"
+              className="
+                bg-[#0b0b0b]
+                border-2 border-[#2A2F45]
+                rounded-lg
+                px-4 py-3
+                shadow-sm
+                flex flex-col gap-1
+              "
             >
-              <div className="flex justify-between mb-1">
-                <span className="text-purple-600 font-semibold">
-                  {comment.user?.username || 'Anonymous'}
+              {/* Meta */}
+              <div className="flex justify-between items-center text-sm text-gray-400">
+                <span className="text-purple-400 font-semibold">
+                  {comment.user?.username || "Anonymous"}
                 </span>
-                <span className="text-sm text-gray-700 opacity-70">
-                  {new Date(comment.createdAt).toLocaleDateString()}
+                <span>
+                  {new Date(comment.createdAt).toLocaleDateString("en-GB")}
                 </span>
               </div>
-              <div className="text-base text-black">{comment.comments}</div>
+
+              {/* Body */}
+              <div className="text-white text-base mt-1">
+                {comment.comments}
+              </div>
             </div>
           ))
-        ) : null}
+        ) : (
+          <div className="text-gray-400 text-sm">
+            No comments yet.
+          </div>
+        )}
       </div>
 
-      <div className="mt-4">
+      {/* Add Comment */}
+      <div className="mt-4 flex flex-col gap-2">
         <textarea
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           placeholder="Write a comment..."
-          className="w-full p-3 rounded-xl border-2 border-gray-300 bg-white bg-opacity-30 text-black resize-none"
           rows={3}
+          className="
+            w-full
+            resize-none
+            rounded-lg
+            border-2 border-[#2A2F45]
+            bg-[#0F1220]
+            p-3
+            text-white
+            placeholder:text-gray-500
+            focus:outline-none
+            focus:border-purple-500
+            transition
+          "
         />
+
         <button
           onClick={handleAddComment}
           disabled={loading}
-          className="mt-2 bg-purple-600 text-white px-4 py-2 rounded-xl hover:bg-purple-700 transition hover:scale-105 font-bold disabled:opacity-50"
+          className="
+            w-fit
+            px-5 py-2
+            rounded-full
+            bg-[#7B6CFF]
+            text-white
+            font-semibold
+            hover:scale-105
+            hover:bg-[#6A5CFF]
+            transition
+            disabled:opacity-50
+            disabled:cursor-not-allowed
+          "
         >
-          {loading ? 'Posting...' : 'Post Comment'}
+          {loading ? "Posting..." : "Post Comment"}
         </button>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Comments
+export default Comments;
